@@ -12,8 +12,8 @@ function SongCard({ image, title, artist }) {
 }
 
 export default function HomePage() {
-  const trendingSongs = [ { image: 'https://i.scdn.co/image/ab67616d00001e02c521a8377995c64375b43b67', title: 'The Fate of Ophelia', artist: 'Taylor Swift' }, { image: 'https://i.scdn.co/image/ab67616d00001e02927b20398f6a9a811c035614', title: 'NGƯỜI NHƯ ANH', artist: 'Anh Tú "Voi Bản Đôn"' }, { image: 'https://i.scdn.co/image/ab67616d00001e0281c79e2b1b453e0078734208', title: 'Không Buông', artist: 'Hngle, Ari' }];
-  const popularArtists = [ { image: 'https://i.scdn.co/image/ab67616100005174026dd7153229a06637b51e51', name: 'Sơn Tùng M-TP', type: 'Artist' }, { image: 'https://i.scdn.co/image/ab67616100005174989ed068a0443d344d564b19', name: 'SOOBIN', type: 'Artist' }, { image: 'https://i.scdn.co/image/ab67616100005174a781a74d478705756a1b6360', name: 'HIEUTHUHAI', type: 'Artist' }];
+  const trendingSongs = [{ image: 'https://i.scdn.co/image/ab67616d00001e02c521a8377995c64375b43b67', title: 'The Fate of Ophelia', artist: 'Taylor Swift' }, { image: 'https://i.scdn.co/image/ab67616d00001e02927b20398f6a9a811c035614', title: 'NGƯỜI NHƯ ANH', artist: 'Anh Tú "Voi Bản Đôn"' }, { image: 'https://i.scdn.co/image/ab67616d00001e0281c79e2b1b453e0078734208', title: 'Không Buông', artist: 'Hngle, Ari' }];
+  const popularArtists = [{ image: 'https://i.scdn.co/image/ab67616100005174026dd7153229a06637b51e51', name: 'Sơn Tùng M-TP', type: 'Artist' }, { image: 'https://i.scdn.co/image/ab67616100005174989ed068a0443d344d564b19', name: 'SOOBIN', type: 'Artist' }, { image: 'https://i.scdn.co/image/ab67616100005174a781a74d478705756a1b6360', name: 'HIEUTHUHAI', type: 'Artist' }];
 
   return (
     <main className="p-6">

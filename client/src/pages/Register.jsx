@@ -1,71 +1,81 @@
 import React, { useState } from "react";
-import InputField from "../components/InputField";
 import { Link } from "react-router-dom";
+import { FaGoogle, FaApple } from "react-icons/fa";
 
 const Register = () => {
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [error, setError] = useState("");
 
     const handleRegister = (e) => {
         e.preventDefault();
-
-        if (password !== confirmPassword) {
-            setError("Mật khẩu xác nhận không khớp!");
-            return;
-        }
-
-        setError("");
-        console.log("Register:", { email, password });
-
-        // 👉 Sau này gọi API thật ở đây
-        // axios.post("/api/register", { email, password })
+        console.log("Register with:", { email });
+        // 👉 Sau này sẽ gọi API đăng ký
     };
 
     return (
-        <div className="flex items-center justify-center h-screen bg-gray-100">
-            <form
-                onSubmit={handleRegister}
-                className="bg-white p-8 rounded-2xl shadow-md w-80"
-            >
-                <h2 className="text-2xl font-bold mb-6 text-center">Đăng ký</h2>
+        <div className="flex items-center justify-center min-h-screen bg-black">
+            <div className="bg-neutral-900 p-8 rounded-lg shadow-lg w-full max-w-md">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-white mb-2">
+                        Đăng ký để bắt đầu nghe
+                    </h2>
+                </div>
 
-                <InputField
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-                <InputField
-                    label="Mật khẩu"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-                <InputField
-                    label="Xác nhận mật khẩu"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                />
+                <form onSubmit={handleRegister} className="space-y-6">
+                    {/* Email Field */}
+                    <div>
+                        <label className="block text-sm font-medium text-white mb-3">
+                            Địa chỉ email
+                        </label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-4 py-3 bg-neutral-800 border border-neutral-700 rounded text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                            placeholder="name@domain.com"
+                            required
+                        />
+                    </div>
 
-                {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
-
-                <button
-                    type="submit"
-                    className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition"
-                >
-                    Đăng ký
-                </button>
-
-                <p className="text-sm text-center mt-4">
-                    Đã có tài khoản?{" "}
-                    <Link to="/login" className="text-blue-600 hover:underline">
-                        Đăng nhập
+                    {/* Next Button */}
+                    <Link to='/register1'>
+                        <button
+                            type="button"
+                            className="w-full bg-green-500 text-black font-bold py-3 rounded-full hover:bg-green-400 transition duration-300"
+                        >
+                            Tiếp theo
+                        </button>
                     </Link>
-                </p>
-            </form>
+                </form>
+
+                {/* Divider */}
+                <div className="flex items-center my-6">
+                    <div className="flex-1 border-t border-neutral-700"></div>
+                    <span className="px-4 text-neutral-400 text-sm">hoặc</span>
+                    <div className="flex-1 border-t border-neutral-700"></div>
+                </div>
+
+                {/* Social Register Buttons */}
+                <div className="space-y-3">
+                    <button className="w-full bg-white text-black font-medium py-3 rounded-full hover:bg-neutral-200 transition duration-300 flex items-center justify-center gap-3">
+                        <FaGoogle className="text-red-500" />
+                        Đăng ký bằng Google
+                    </button>
+                </div>
+
+                {/* Login Link */}
+                <div className="text-center mt-6">
+                    <p className="text-neutral-400 text-sm">
+                        Đã có tài khoản?{" "}
+                        <Link
+                            to="/login"
+                            className="text-white hover:text-green-500 font-medium underline transition duration-300"
+                        >
+                            Đăng nhập
+                        </Link>
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };
