@@ -1,6 +1,7 @@
 // src/components/Header.jsx
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { GoSearch } from "react-icons/go";
+import { Link } from "react-router-dom";
 
 export default function Header({ isLoggedIn }) {
   return (
@@ -26,8 +27,8 @@ export default function Header({ isLoggedIn }) {
           </>
         ) : (
           <>
-            <button className="text-neutral-400 font-semibold hover:text-white hover:scale-105 transition">Sign up</button>
-            <button className="bg-white text-black font-semibold px-8 py-3 rounded-full hover:scale-105 transition">Log in</button>
+            <Link to='/register'><button className="text-neutral-400 font-semibold hover:text-white hover:scale-105 transition">Sign up</button></Link>
+            <Link to='/login'><button className="bg-white text-black font-semibold px-8 py-3 rounded-full hover:scale-105 transition">Log in</button></Link>
           </>
         )}
       </div>
