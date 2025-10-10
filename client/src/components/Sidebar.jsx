@@ -2,6 +2,7 @@
 import { Link } from 'react-router-dom';
 import { GoHome, GoSearch, GoBook } from "react-icons/go";
 import { FiPlus } from "react-icons/fi";
+import React, { useState } from "react";
 
 function PlaylistItem({ image, title, subtitle }) {
   return (
@@ -16,7 +17,25 @@ function PlaylistItem({ image, title, subtitle }) {
 }
 
 export default function Sidebar({ isLoggedIn }) {
-  const userLibrary = [
+
+  const [userLibrary, setUserLibrary] = useState([
+    {
+      title: "Liked Songs",
+      subtitle: "Your favorite tracks",
+      image: "https://placehold.co/100x100?text=♥", // ảnh minh họa
+    },
+  ]);
+
+  const handleCreatePlaylist = () => {
+    const newPlaylist = {
+      title: `My Playlist ${userLibrary.length}`,
+      subtitle: "New playlist",
+      image: "https://placehold.co/100x100",
+    };
+    setUserLibrary([...userLibrary, newPlaylist]);
+  };
+
+  const _userLibrary = [
     { image: 'https://i.scdn.co/image/ab67706f00000002162a0542915598284534714f', title: 'Liked Songs', subtitle: 'Playlist • 1 song' },
     { image: 'https://i.scdn.co/image/ab67616d00004851299227f33963534e12c1a403', title: 'Có em', subtitle: 'Album • Madihu, WOKEUP' },
     { image: 'https://i.scdn.co/image/ab67616d000048510e1e6b528827a4e612984536', title: 'Vũ', subtitle: 'Artist' },
@@ -39,7 +58,16 @@ export default function Sidebar({ isLoggedIn }) {
       <div className="bg-neutral-900 rounded-lg flex-1 flex flex-col">
         <div className="flex justify-between items-center p-4">
           <a href="#" className="flex items-center gap-2 text-neutral-400 hover:text-white transition font-bold"><GoBook size={24} /><span>Your Library</span></a>
-          <button className="text-neutral-400 hover:text-white transition"><FiPlus size={20} /></button>
+          <button
+            onClick={handleCreatePlaylist}
+            className="flex items-center gap-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-full px-4 py-1 font-bold text-sm transition focus:outline-none"
+            style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.15)' }}
+          >
+            <span className="text-white w-5 h-7 flex items-center justify-center text-base font-bold">
+              <FiPlus size={18} />
+            </span>
+            <span className="hidden sm:inline text-white">Create</span>
+          </button>
         </div>
         
         {isLoggedIn ? (
@@ -52,7 +80,15 @@ export default function Sidebar({ isLoggedIn }) {
           <div className="bg-neutral-800 rounded-lg p-4 m-2 text-white">
             <p className="font-bold text-sm mb-1">Create your first playlist</p>
             <p className="text-xs mb-4">It's easy, we'll help you</p>
-            <button className="bg-white text-black text-xs font-bold px-4 py-1.5 rounded-full hover:scale-105 transition">Create playlist</button>
+            <button
+              className="flex items-center gap-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white rounded-full px-4 py-1 font-bold text-sm transition focus:outline-none"
+              style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.15)' }}
+            >
+              <span className="text-white w-5 h-7 flex items-center justify-center text-base font-bold">
+                <FiPlus size={18} />
+              </span>
+              <span className="hidden sm:inline text-white">Create</span>
+            </button>
           </div>
         )}
       </div>
