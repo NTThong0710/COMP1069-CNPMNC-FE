@@ -153,7 +153,7 @@ function App() {
         <Route element={<MainLayout />}>
           <Route
             path="/"
-            element={isLoggedIn ? <AlbumPage onSongSelect={handleSelectSong} /> : <HomePage />}
+            element={<HomePage />}
           />
           <Route
             path="/album/:albumId"

@@ -23,7 +23,17 @@ export default function Sidebar({ isLoggedIn }) {
   // TẠO REF ĐỂ THAM CHIẾU ĐẾN KHU VỰC "CREATE PLAYLIST"
   const createPlaylistRef = useRef(null); 
 
-  const userLibrary = [
+  const [userLibrary, setUserLibrary] = useState([
+    {
+      title: "Liked Songs",
+      subtitle: "Your favorite tracks",
+      image: "https://placehold.co/100x100?text=♥", // ảnh minh họa
+    },
+  ]);
+
+  
+
+  const _userLibrary = [
     { image: 'https://i.scdn.co/image/ab67706f00000002162a0542915598284534714f', title: 'Liked Songs', subtitle: 'Playlist • 1 song' },
     { image: 'https://i.scdn.co/image/ab67616d00004851299227f33963534e12c1a403', title: 'Có em', subtitle: 'Album • Madihu, WOKEUP' },
     { image: 'https://i.scdn.co/image/ab67616d000048510e1e6b528827a4e612984536', title: 'Vũ', subtitle: 'Artist' },
@@ -31,22 +41,33 @@ export default function Sidebar({ isLoggedIn }) {
   ];
 
   // Hàm xử lý click, lấy vị trí của nút được bấm
-  const handleAuthActionClick = (event) => {
-    if (!isLoggedIn) {
-      event.preventDefault();
-      event.stopPropagation();
+  const handleCreatePlaylistClick = (event) => {
+  // Nếu chưa đăng nhập → mở tooltip hướng dẫn đăng nhập
+  if (!isLoggedIn) {
+    event.preventDefault();
+    event.stopPropagation();
 
-      // CHỈ LẤY VỊ TRÍ CỦA REF, BẤT KỂ CLICK VÀO ĐÂU
-      if (createPlaylistRef.current) {
-        const rect = createPlaylistRef.current.getBoundingClientRect();
-        setTooltipPosition({
-          top: rect.top,          // Căn trên bằng mép trên của khu vực ref
-          left: rect.right + 10,  // Căn trái, cách mép phải của khu vực ref 10px
-        });
-        setIsTooltipOpen(true);
-      }
+    if (createPlaylistRef.current) {
+      const rect = createPlaylistRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        top: rect.top,
+        left: rect.right + 10,
+      });
+      setIsTooltipOpen(true);
     }
+
+    return; // Dừng ở đây, không tạo playlist
+  }
+
+  // Nếu đã đăng nhập → tạo playlist mới
+  const newPlaylist = {
+    title: `My Playlist ${userLibrary.length}`,
+    subtitle: "New playlist",
+    image: "https://placehold.co/100x100",
   };
+
+  setUserLibrary([...userLibrary, newPlaylist]);
+};
 
   // Tự động đóng tooltip khi click ra ngoài
   useEffect(() => {
@@ -80,7 +101,8 @@ export default function Sidebar({ isLoggedIn }) {
         <div className="flex justify-between items-center p-4">
           <span className="flex items-center gap-2 text-white transition font-bold"><GoBook size={24} /><span>Your Library</span></span>
           <button
-            onClick={handleAuthActionClick}
+            ref={createPlaylistRef}
+            onClick={handleCreatePlaylistClick}
             className="group relative flex items-center justify-center w-10 h-10 
                       rounded-full bg-neutral-900 text-white 
                       transition 
@@ -101,7 +123,7 @@ export default function Sidebar({ isLoggedIn }) {
           <div ref={createPlaylistRef} className="bg-neutral-800 rounded-lg p-4 m-2 text-white">
             <p className="font-bold text-sm mb-1">Create your first playlist</p>
             <p className="text-xs mb-4">It's easy, we'll help you</p>
-            <button onClick={handleAuthActionClick} className="bg-white text-black text-xs text-[13px] font-bold px-6 py-2 rounded-full hover:scale-105 transition">Create playlist</button>
+            <button ref={createPlaylistRef} onClick={handleCreatePlaylistClick} className="bg-white text-black text-xs text-[13px] font-bold px-6 py-2 rounded-full hover:scale-105 transition">Create playlist</button>
           </div>
         )}
       </div>
