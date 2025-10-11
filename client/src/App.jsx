@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
-
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import PlayerBar from './components/PlayerBar';
@@ -15,6 +14,9 @@ import Register from './pages/Register';
 import Register1 from './pages/Register1';
 import Register2 from './pages/Register2';
 import Register3 from './pages/Register3';
+
+// Hằng số cho selector của phần tử cuộn (dùng \\/ để thoát ký tự / trong JS string)
+const SCROLL_SELECTOR = '.overflow-y-auto.bg-gradient-to-b.from-neutral-800\\/60.to-black.rounded-lg.m-2';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -53,35 +55,62 @@ function App() {
 
   const handleLogin = () => setIsLoggedIn(!isLoggedIn);
 
+  // === LOGIC XỬ LÝ CUỘN TỐI ƯU (Phiên bản đã sửa lỗi logic) ===
   useEffect(() => {
-  const handleScroll = (el) => {
-    const { scrollTop, scrollHeight, clientHeight } = el;
-    if (scrollTop === 0) {
-      el.classList.add("scroll-top");
-      el.classList.remove("scroll-bottom");
-    } else if (scrollTop + clientHeight >= scrollHeight) {
-      el.classList.add("scroll-bottom");
-      el.classList.remove("scroll-top");
-    } else {
-      el.classList.remove("scroll-top", "scroll-bottom");
-    }
-  };
+    const handleScrollLogic = (el) => {
+      const scrollTop = el.scrollTop;
+      const scrollHeight = el.scrollHeight;
+      const clientHeight = el.clientHeight;
 
-  // chọn tất cả phần tử có thể cuộn (overflow-y: auto hoặc scroll)
-  const scrollables = document.querySelectorAll("*");
-  scrollables.forEach((el) => {
-    const style = window.getComputedStyle(el);
-    if (["auto", "scroll"].includes(style.overflowY)) {
-      el.addEventListener("scroll", () => handleScroll(el));
-    }
-  });
+      const maxScroll = Math.round(scrollHeight - clientHeight);
+      const currentScrollTop = Math.round(scrollTop);
 
-  return () => {
-    scrollables.forEach((el) => {
-      el.removeEventListener("scroll", () => handleScroll(el));
-    });
-  };
-}, []);
+      // Chúng ta đặt class lên thẻ <html> để CSS có thể sử dụng selector mạnh hơn
+      const htmlElement = document.documentElement;
+
+      // Nếu nội dung quá ngắn, không cần class
+      if (scrollHeight <= clientHeight + 1) {
+        htmlElement.classList.remove('at-top', 'at-bottom');
+        return;
+      }
+
+      // 💡 ĐIỀU KIỆN ĐẦU TRANG
+      if (currentScrollTop <= 5) {
+        htmlElement.classList.add('at-top');
+        htmlElement.classList.remove('at-bottom');
+      }
+      // 💡 ĐIỀU KIỆN CUỐI TRANG
+      else if (currentScrollTop >= maxScroll - 5) {
+        htmlElement.classList.add('at-bottom');
+        htmlElement.classList.remove('at-top');
+      }
+      // Ở GIỮA
+      else {
+        htmlElement.classList.remove('at-top', 'at-bottom');
+      }
+    };
+
+    // Tìm phần tử cuộn thực tế
+    const scrollTarget = document.querySelector(SCROLL_SELECTOR);
+
+    if (scrollTarget) {
+      const scrollHandler = () => handleScrollLogic(scrollTarget);
+
+      // Gắn sự kiện scroll vào DIV nội dung chính
+      scrollTarget.addEventListener('scroll', scrollHandler, { passive: true });
+      window.addEventListener('resize', scrollHandler);
+      window.addEventListener('load', scrollHandler);
+
+      handleScrollLogic(scrollTarget); // Chạy lần đầu
+
+      return () => {
+        scrollTarget.removeEventListener('scroll', scrollHandler);
+        window.removeEventListener('resize', scrollHandler);
+      };
+    }
+  }, []);
+  // === KẾT THÚC LOGIC CUỘN TỐI ƯU ===
+
 
   // === Layout riêng cho Login / Register ===
   const AuthLayout = () => {
@@ -92,7 +121,8 @@ function App() {
     );
   };
 
-
+  // Hàm chuyển đổi selector thành chuỗi class thuần
+  const mainContentClasses = SCROLL_SELECTOR.replace(/\\/g, '').replace(/\./g, ' ').trim();
 
   // === Layout chính của App ===
   const MainLayout = () => (
@@ -101,7 +131,8 @@ function App() {
         <Sidebar isLoggedIn={isLoggedIn} />
         <div className="flex-grow flex flex-col">
           <Header isLoggedIn={isLoggedIn} />
-          <div className="overflow-y-auto bg-gradient-to-b from-neutral-800/60 to-black rounded-lg m-2">
+          {/* DIV CUỘN THỰC TẾ */}
+          <div className={mainContentClasses}>
             <Outlet />
           </div>
         </div>
