@@ -4,13 +4,19 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import PlayerBar from './components/PlayerBar';
 import PlayerBarActive from './components/PlayerBarActive';
-import RightSidebar from './components/RightSidebar'; 
+import RightSidebar from './components/RightSideBar'; 
 import HomePage from './pages/HomePage';
 import AlbumPage from './pages/AlbumPage';
 import SearchPage from './pages/SearchPage';
-import Login from './pages/Login';
-import Register from './pages/Register';
+
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import Login from './pages/Login';
+import Login1 from './pages/Login1';
+import Login2 from './pages/Login2';
+import Register from './pages/Register';
+import Register1 from './pages/Register1';
+import Register2 from './pages/Register2';
+import Register3 from './pages/Register3';
 
 // Selector cho vùng nội dung có thể cuộn của BẠN.
 const SCROLL_SELECTOR = '.main-content-scroll';
@@ -184,7 +190,12 @@ function AppLayout() {
       <Routes>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<Login />} />
+          <Route path="/login1" element={<Login1 />} />
+          <Route path="/login2" element={<Login2 />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/register1" element={<Register1 />} />
+          <Route path="/register2" element={<Register2 />} />
+          <Route path="/register3" element={<Register3 />} />
         </Route>
         <Route path="/" element={<MainLayout />}>
           <Route index element={ <HomePage isLoggedIn={isLoggedIn} onSongSelect={handleSelectSong} /> } />
