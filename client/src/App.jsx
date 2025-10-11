@@ -53,6 +53,36 @@ function App() {
 
   const handleLogin = () => setIsLoggedIn(!isLoggedIn);
 
+  useEffect(() => {
+  const handleScroll = (el) => {
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    if (scrollTop === 0) {
+      el.classList.add("scroll-top");
+      el.classList.remove("scroll-bottom");
+    } else if (scrollTop + clientHeight >= scrollHeight) {
+      el.classList.add("scroll-bottom");
+      el.classList.remove("scroll-top");
+    } else {
+      el.classList.remove("scroll-top", "scroll-bottom");
+    }
+  };
+
+  // chọn tất cả phần tử có thể cuộn (overflow-y: auto hoặc scroll)
+  const scrollables = document.querySelectorAll("*");
+  scrollables.forEach((el) => {
+    const style = window.getComputedStyle(el);
+    if (["auto", "scroll"].includes(style.overflowY)) {
+      el.addEventListener("scroll", () => handleScroll(el));
+    }
+  });
+
+  return () => {
+    scrollables.forEach((el) => {
+      el.removeEventListener("scroll", () => handleScroll(el));
+    });
+  };
+}, []);
+
   // === Layout riêng cho Login / Register ===
   const AuthLayout = () => {
     return (

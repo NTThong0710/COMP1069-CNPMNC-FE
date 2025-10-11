@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 // src/components/PlayerBar.jsx
 export default function PlayerBar() {
   return (
@@ -6,7 +8,7 @@ export default function PlayerBar() {
         <p className="font-bold text-sm uppercase">Preview of Spotify</p>
         <p className="text-sm">Sign up to get unlimited songs and podcasts with occasional ads.</p>
       </div>
-      <button className="bg-white text-black font-bold px-8 py-3 rounded-full hover:scale-105 transition">Sign up free</button>
+      <Link to='/register'><button className="bg-white text-black font-bold px-8 py-3 rounded-full hover:scale-105 transition">Sign up free</button></Link>
     </div>
   );
 }
