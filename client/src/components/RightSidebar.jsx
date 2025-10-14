@@ -32,7 +32,7 @@ export default function RightSidebar({ song, onClose }) {
     name: "Vũ.",
     monthlyListeners: "1,724,264",
     bio: "I'm Vu.<br>", // Dùng <br> như trong hình
-    bannerImage: "https://i.scdn.co/image/ab67618600001016a2a0b3c6c1c8a3c3b0f3b0f3"
+    bannerImage: "/Sơn Tùng MTP.png"
   };
 
   return (

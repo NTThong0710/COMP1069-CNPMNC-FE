@@ -125,7 +125,7 @@ function AppLayout() {
       <div className="flex-1 flex overflow-hidden"> 
         <ResizablePanelGroup ref={panelGroupRef} direction="horizontal">
           <ResizablePanel 
-            defaultSize={15} 
+            defaultSize={30} 
             minSize={isLoggedIn ? 10 : 20} 
             maxSize={40}
             className="p-2"

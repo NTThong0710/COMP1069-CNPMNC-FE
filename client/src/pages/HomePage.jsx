@@ -34,7 +34,7 @@ export default function HomePage({ isLoggedIn, onSongSelect }) {
   // --- THAY ĐỔI 2: Cập nhật dữ liệu cho đa dạng và thêm ID ---
   // Việc này giúp key trong React là duy nhất và dữ liệu trông thật hơn
   const trendingSongs = [
-    { id: 's1', title: 'The Fate of Ophelia', artist: 'Taylor Swift', image: '/The Fate of Ophelia.jpg', url: '/music/ophelia.mp3' },
+    { id: 's1', title: 'The Fate of Ophelia', artist: 'Taylor Swift', image: '/The Fate of Ophelia.jpg', url: '/Nắng Ấm Xa Dần (Remix).mp3' },
     { id: 's3', title: 'Không Buông', artist: 'Hngle, Ari', image: '/Không buông.jpg', url: '/music/khong-buong.mp3' },
     { id: 's4', title: 'Không Buông', artist: 'Hngle, Ari', image: '/Không buông.jpg', url: '/music/khong-buong.mp3' },
     { id: 's5', title: 'Không Buông', artist: 'Hngle, Ari', image: '/Không buông.jpg', url: '/music/khong-buong.mp3' },
