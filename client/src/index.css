@@ -1,10 +1,6 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-/* ==================================================================== */
-/* === STYLING THANH CUỘN VỚI HIỆU ỨNG BO GÓC PHẢI ĐỘNG === */
-/* ==================================================================== */
-
 /* 1. Style chung cho tất cả thanh cuộn */
 ::-webkit-scrollbar {
     width: 12px;
