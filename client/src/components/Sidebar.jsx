@@ -6,13 +6,12 @@ import { Heart, Music } from "lucide-react";
 import LoginTooltip from "./LoginTooltip";
 import { Link } from "react-router-dom";
 
-// Cập nhật PlaylistItem để có animation mượt hơn
 function PlaylistItem({ image, title, subtitle, isCollapsed }) {
   return (
     <Link
       to="/my-playlists"
-      className={`flex items-center gap-4 p-2 rounded-md hover:bg-neutral-800 transition-colors duration-200 ${
-        isCollapsed ? "justify-center" : ""
+      className={`flex items-center p-2 rounded-md hover:bg-neutral-800 transition-colors duration-200 ${
+        isCollapsed ? "justify-center" : "gap-4"
       }`}
     >
       <div
@@ -24,23 +23,20 @@ function PlaylistItem({ image, title, subtitle, isCollapsed }) {
       >
         {image}
       </div>
-      {/* === ANIMATION CHO TEXT === */}
-      <div
-        className={`flex-1 min-w-0 transition-all duration-200 ease-in-out origin-left ${
-          isCollapsed
-            ? "opacity-0 scale-90 w-0"
-            : "opacity-100 scale-100 w-auto"
-        }`}
-      >
-        <p className="text-sm font-semibold text-white truncate">{title}</p>
-        <p
-          className={`text-xs truncate ${
-            title === "Liked Songs" ? "text-white/80" : "text-neutral-400"
-          }`}
-        >
-          {subtitle}
-        </p>
-      </div>
+
+      {/* Text chỉ hiện khi chưa collapse */}
+      {!isCollapsed && (
+        <div className="flex-1 min-w-0 transition-all duration-200 ease-in-out origin-left opacity-100 scale-100 w-auto">
+          <p className="text-sm font-semibold text-white truncate">{title}</p>
+          <p
+            className={`text-xs truncate ${
+              title === "Liked Songs" ? "text-white/80" : "text-neutral-400"
+            }`}
+          >
+            {subtitle}
+          </p>
+        </div>
+      )}
     </Link>
   );
 }
@@ -54,7 +50,7 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
     {
       title: "Liked Songs",
       subtitle: "Playlist • 127 songs",
-      image: <Heart className="w-6 h-6 text-white" />,
+      image: <Heart className="w-6 h-6 text-white justify-center" />,
     },
   ]);
 
@@ -86,8 +82,8 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
 
   return (
     <aside
-      className={`h-full bg-black flex flex-col transition-all duration-300 ease-in-out border-r border-neutral-800 ${
-        isCollapsed ? "w-[80px]" : "w-[300px]" // Tăng nhẹ chiều rộng để đẹp hơn
+      className={`h-full bg-black flex flex-col transition-all duration-1000 ease-in-out p-2 ${
+        isCollapsed ? "w-[80px]" : "w-[300px]"
       }`}
     >
       <div className="bg-neutral-900 rounded-lg flex-1 flex flex-col overflow-hidden">
@@ -97,65 +93,53 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
             isCollapsed ? "justify-center" : "justify-between"
           }`}
         >
+          {/* GoBook + "Your Library" */}
           <div
-            className="flex items-center text-neutral-400 font-bold hover:text-white cursor-pointer transition gap-4"
+            className={`flex items-center text-neutral-400 font-bold hover:text-white cursor-pointer transition ${
+              isCollapsed ? "justify-center" : "gap-4"
+            }`}
             onClick={onToggleCollapse}
           >
             <GoBook size={26} className="flex-shrink-0" />
-            {/* === ANIMATION CHO CHỮ "YOUR LIBRARY" === */}
-            <span
-              className={`transition-all duration-200 ease-in-out origin-left ${
-                isCollapsed
-                  ? "opacity-0 scale-95 w-0"
-                  : "opacity-100 scale-100 w-auto"
-              }`}
-            >
-              Your Library
-            </span>
+            {!isCollapsed && (
+              <span className="transition-all duration-200 ease-in-out origin-left opacity-100 scale-100">
+                Your Library
+              </span>
+            )}
           </div>
 
-          {/* === ANIMATION CHO CÁC NÚT BẤM === */}
-          <div
-            className={`flex items-center gap-2 transition-all duration-200 ${
-              isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-            }`}
-          >
-            <button
-              ref={createPlaylistRef}
-              onClick={handleCreatePlaylistClick}
-              className="p-1 text-neutral-400 hover:text-white transition"
-              title="Create playlist"
-            >
-              <FiPlus size={22} />
-            </button>
-            <button
-              onClick={onToggleCollapse}
-              className="p-1 text-neutral-400 hover:text-white transition"
-              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              <PiArrowLineLeft
-                size={22}
-                className={`transition-transform duration-300 ${
-                  isCollapsed ? "rotate-180" : "rotate-0"
-                }`}
-              />
-            </button>
-          </div>
+          {/* Nút tạo playlist và collapse */}
+          {!isCollapsed && (
+            <div className="flex items-center gap-2 transition-all duration-200">
+              <button
+                ref={createPlaylistRef}
+                onClick={handleCreatePlaylistClick}
+                className="p-1 text-neutral-400 hover:text-white transition"
+                title="Create playlist"
+              >
+                <FiPlus size={22} />
+              </button>
+              <button
+                onClick={onToggleCollapse}
+                className="p-1 text-neutral-400 hover:text-white transition"
+                title="Collapse sidebar"
+              >
+                <PiArrowLineLeft size={22} />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Nội dung */}
         {isLoggedIn ? (
           <div
-            className={`overflow-y-auto py-2 space-y-1 transition-all duration-300 ${
-              isCollapsed ? "px-1" : "px-2"
-            }`}
+            className={`overflow-y-auto py-2 space-y-1 transition-all duration-300 px-2`}
           >
             {userLibrary.map((item, index) => (
               <PlaylistItem key={index} {...item} isCollapsed={isCollapsed} />
             ))}
           </div>
         ) : (
-          // === ANIMATION CHO KHỐI "CREATE PLAYLIST" ===
           <div
             className={`overflow-hidden transition-all duration-300 ${
               isCollapsed ? "opacity-0 max-h-0" : "opacity-100 max-h-full"
@@ -193,6 +177,8 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
           </div>
         )}
       </div>
+
+      {/* Tooltip */}
       <LoginTooltip
         isOpen={isTooltipOpen}
         onClose={() => setIsTooltipOpen(false)}
