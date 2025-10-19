@@ -1,6 +1,7 @@
 import { Play, Shuffle, Download } from "lucide-react";
+import { FaRegClock } from "react-icons/fa";
 
-export default function MyPlaylists() {
+export default function LikedSongs({ onSongSelect }) {
   const songs = [
     {
       id: 1,
@@ -96,7 +97,8 @@ export default function MyPlaylists() {
             <p className="text-sm font-semibold">Playlist</p>
             <h1 className="text-7xl font-bold mt-2">Liked Songs</h1>
             <p className="text-sm mt-4 text-gray-300">
-              <span className="font-semibold">Tấn Tú Nguyễn</span> • 12 songs
+              <span className="font-semibold">Tấn Tú Nguyễn</span> •{" "}
+              {songs.length} songs
             </p>
           </div>
         </div>
@@ -105,7 +107,10 @@ export default function MyPlaylists() {
       <section className="bg-gradient-to-b from-[#1c1433] via-[#121212] to-[#121212] p-8">
         {/* Controls */}
         <div className="flex items-center gap-6 p-8 pt-4">
-          <button className="bg-green-500 hover:bg-green-400 text-black rounded-full p-4">
+          <button
+            onClick={() => onSongSelect(songs[0], songs, 0)}
+            className="bg-green-500 hover:bg-green-400 text-black rounded-full p-4"
+          >
             <Play size={28} fill="black" />
           </button>
           <button className="text-gray-300 hover:text-white">
@@ -122,13 +127,16 @@ export default function MyPlaylists() {
           <div>Title</div>
           <div>Album</div>
           <div>Date added</div>
-          <div className="text-right">⏱</div>
+          <div className="flex justify-end">
+            <FaRegClock />
+          </div>
         </div>
 
         {/* Song list */}
         <div>
           {songs.map((song, index) => (
             <div
+              onClick={() => onSongSelect(song, songs, index)}
               key={song.id}
               className="grid grid-cols-[40px_6fr_4fr_3fr_80px] items-center px-8 py-3 hover:bg-neutral-800/60 transition-all duration-200 cursor-pointer"
             >

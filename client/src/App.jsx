@@ -20,7 +20,7 @@ import Login from "./pages/Login";
 
 import Register from "./pages/Register";
 
-import MyPlaylists from "./pages/MyPlaylists";
+import LikedSongs from "./pages/LikedSongsPage";
 
 // ✅ 1. THÊM IMPORT CHO CÁC TRANG MỚI
 import PlaylistPage from "./pages/PlaylistPage";
@@ -35,7 +35,7 @@ function AppLayout() {
   // === STATE GỐC (GIỮ NGUYÊN) ===
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
   const [currentArtistInfo, setCurrentArtistInfo] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -95,7 +95,9 @@ function AppLayout() {
     };
     const scrollTarget = document.querySelector(SCROLL_SELECTOR);
     if (scrollTarget) {
-      scrollTarget.addEventListener("scroll", handleScrollLogic, { passive: true });
+      scrollTarget.addEventListener("scroll", handleScrollLogic, {
+        passive: true,
+      });
       window.addEventListener("resize", handleScrollLogic);
       handleScrollLogic();
       return () => {
@@ -163,19 +165,35 @@ function AppLayout() {
     <Routes>
       <Route element={<AuthLayout />}>
         <Route path="/login" element={<Login />} />
-        
+
         <Route path="/register" element={<Register />} />
-        
       </Route>
       <Route path="/" element={<MainLayout />}>
-        <Route index element={<HomePage isLoggedIn={isLoggedIn} onSongSelect={handleSelectSong} />} />
-        <Route path="/album/:albumId" element={<AlbumPage onSongSelect={handleSelectSong} />} />
+        <Route
+          index
+          element={
+            <HomePage isLoggedIn={isLoggedIn} onSongSelect={handleSelectSong} />
+          }
+        />
+        <Route
+          path="/album/:albumId"
+          element={<AlbumPage onSongSelect={handleSelectSong} />}
+        />
         <Route path="/search" element={<SearchPage />} />
-        <Route path="/my-playlists" element={<MyPlaylists />} />
+        <Route
+          path="/likedSongs"
+          element={<LikedSongs onSongSelect={handleSelectSong} />}
+        />
 
         {/* ✅ 2. THÊM 3 ROUTE MỚI VÀO ĐÂY */}
-        <Route path="/playlist/:playlistId" element={<PlaylistPage onSongSelect={handleSelectSong} />} />
-        <Route path="/artist/:artistId" element={<ArtistPage onSongSelect={handleSelectSong} />} />
+        <Route
+          path="/playlist/:playlistId"
+          element={<PlaylistPage onSongSelect={handleSelectSong} />}
+        />
+        <Route
+          path="/artist/:artistId"
+          element={<ArtistPage onSongSelect={handleSelectSong} />}
+        />
         <Route path="/profile" element={<ProfilePage />} />
       </Route>
     </Routes>
