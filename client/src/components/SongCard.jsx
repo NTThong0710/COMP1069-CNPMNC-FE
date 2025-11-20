@@ -1,10 +1,11 @@
-import { FaPlay } from "react-icons/fa"; // Import icon Play
+import { FaPlay } from "react-icons/fa";
 
-function SongCard({ image, title, artist }) {
+function SongCard({ image, title, artist, onClick }) {
   return (
-    // Dùng 'group' để kích hoạt hiệu ứng cho phần tử con khi hover vào cha
-    <div className="group relative bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition-all duration-300 cursor-pointer shadow-lg">
-      
+    <div 
+      className="group relative bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition-all duration-300 cursor-pointer shadow-lg"
+      onClick={onClick}
+    >
       {/* Container cho ảnh và nút play */}
       <div className="relative w-full mb-4">
         <img 
