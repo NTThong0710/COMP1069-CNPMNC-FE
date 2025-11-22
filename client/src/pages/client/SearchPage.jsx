@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 // Components
-import CategoryCard from '../components/CategoryCard';
-import ScrollableSection from '../components/ScrollableSection';
-import SongCard from '../components/SongCard';
-import ArtistCard from '../components/ArtistCard';
-import AlbumCard from '../components/AlbumCard';
+import CategoryCard from '../../components/CategoryCard';
+import ScrollableSection from '../../components/ScrollableSection';
+import SongCard from '../../components/SongCard';
+import ArtistCard from '../../components/ArtistCard';
+import AlbumCard from '../../components/AlbumCard';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

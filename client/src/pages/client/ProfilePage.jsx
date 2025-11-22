@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Edit2, LogOut, MoreHorizontal, Disc } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import EditProfileModal from '../components/EditProfileModal';
+import { useAuth } from '../../context/AuthContext';
+import EditProfileModal from '../../components/EditProfileModal';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

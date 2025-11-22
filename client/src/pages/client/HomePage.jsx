@@ -3,12 +3,12 @@ import { Link } from 'react-router-dom';
 import { FaMusic, FaPodcast } from 'react-icons/fa';
 import { BsMusicNoteList } from 'react-icons/bs';
 
-import ArtistCard from '../components/ArtistCard';
-import SongCard from '../components/SongCard';
-import AlbumCard from '../components/AlbumCard';
-import LoginPromptModal from '../components/LoginPromptModal';
-import ScrollableSection from '../components/ScrollableSection';
-import { useAuth } from '../context/AuthContext';
+import ArtistCard from '../../components/ArtistCard';
+import SongCard from '../../components/SongCard';
+import AlbumCard from '../../components/AlbumCard';
+import LoginPromptModal from '../../components/LoginPromptModal';
+import ScrollableSection from '../../components/ScrollableSection';
+import { useAuth } from '../../context/AuthContext';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

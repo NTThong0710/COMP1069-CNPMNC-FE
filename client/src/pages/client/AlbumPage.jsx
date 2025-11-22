@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaPlay, FaRegClock, FaPlus, FaEllipsisH } from 'react-icons/fa';
 import { ArrowLeft } from 'lucide-react';
-import SongActionsMenu from '../components/SongActionMenu';
+import SongActionsMenu from '../../components/SongActionMenu';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

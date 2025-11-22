@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaPlay } from 'react-icons/fa';
 import { BadgeCheck, MoreHorizontal } from 'lucide-react';
-import AlbumCard from '../components/AlbumCard';
+import AlbumCard from '../../components/AlbumCard';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Play, Shuffle, Download } from "lucide-react";
 import { FaRegClock, FaPlay } from "react-icons/fa";
-import { useAuth } from "../context/AuthContext"; 
+import { useAuth } from "../../context/AuthContext"; 
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

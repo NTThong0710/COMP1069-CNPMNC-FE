@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Mic2 } from 'lucide-react'; 
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 
-import { ArtistInfoSection, QueueSection, SimilarSongsSection } from '../components/RightSidebar';
+import { ArtistInfoSection, QueueSection, SimilarSongsSection } from '../../components/RightSidebar';
 
 // ✅ Import Component Comment đã tách
-import CommentSection from '../components/CommentSection';
+import CommentSection from '../../components/CommentSection';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaGoogle, FaEye, FaEyeSlash } from "react-icons/fa";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../../context/AuthContext";
 
 // Các component con (Step1, Step2...) giống bro gửi, tui đã rút gọn để tập trung logic chính
 // Bro có thể copy lại UI đẹp của bro vào, chỉ cần chú ý phần gọi hàm register

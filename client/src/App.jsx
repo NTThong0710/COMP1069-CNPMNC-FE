@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, Outlet, useLocation, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation, Link, Navigate } from "react-router-dom";
 import { GoHome, GoSearch, GoBook } from "react-icons/go"; // Icon cho Mobile Nav
 
 // Components & Pages
@@ -8,19 +8,27 @@ import Header from "./components/Header";
 import PlayerBar from "./components/PlayerBar";
 import PlayerBarActive from "./components/PlayerBarActive";
 import RightSidebar from "./components/RightSidebar";
-import HomePage from "./pages/HomePage";
-import AlbumPage from "./pages/AlbumPage";
-import SearchPage from "./pages/SearchPage";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import LikedSongs from "./pages/LikedSongsPage";
-import PlaylistPage from "./pages/PlaylistPage";
-import ArtistPage from "./pages/ArtistPage";
-import ProfilePage from "./pages/ProfilePage";
-import HistoryPage from "./pages/HistoryPage";
-import SongPage from "./pages/SongPage";
+import HomePage from "./pages/client/HomePage";
+import AlbumPage from "./pages/client/AlbumPage";
+import SearchPage from "./pages/client/SearchPage";
+import Login from "./pages/client/Login";
+import Register from "./pages/client/Register";
+import LikedSongs from "./pages/client/LikedSongsPage";
+import PlaylistPage from "./pages/client/PlaylistPage";
+import ArtistPage from "./pages/client/ArtistPage";
+import ProfilePage from "./pages/client/ProfilePage";
+import HistoryPage from "./pages/client/HistoryPage";
+import SongPage from "./pages/client/SongPage";
+
+import AdminLayout from "./pages/admin/AdminLayout";
+import DashboardHome from "./pages/admin/DashboardHome";
+import SongManager from "./pages/admin/SongManager";
 
 import { useAuth } from "./context/AuthContext";
+import ArtistManager from "./pages/admin/ArtistManager";
+import UserManager from "./pages/admin/UserManager";
+import AdminSettings from "./pages/admin/AdminSettings";
+import AlbumManager from "./pages/admin/AlbumManager";
 
 const SCROLL_SELECTOR = ".main-content-scroll";
 
@@ -129,7 +137,9 @@ function AppLayout() {
   const handleToggleRepeat = () => setRepeatActive(prev => !prev);
 
   // --- LAYOUT CHÍNH ---
-  const mainLayoutContent = (
+  const mainLayoutContent = (user?.role === 'admin') ? (
+      <Navigate to="/admin" replace />
+  ) : (
     <div className="bg-black h-screen flex flex-col">
       
       {/* 1. HEADER (Ẩn trên mobile nếu muốn, nhưng giữ lại để có nút search) */}
@@ -215,6 +225,16 @@ function AppLayout() {
         <Route path="/history" element={<HistoryPage onSongSelect={handleSelectSong} />} />
         <Route path="/song/:songId" element={<SongPage onSongSelect={handleSelectSong} />} />
       </Route>
+
+      <Route path="/admin" element={<AdminLayout />}>
+         <Route index element={<DashboardHome />} />
+         <Route path="songs" element={<SongManager />} />
+         <Route path="artists" element={<ArtistManager/>} />
+         <Route path="albums" element={<AlbumManager />} />
+         <Route path="users" element={<UserManager />} />
+         <Route path="settings" element={<AdminSettings />} />
+      </Route>
+
     </Routes>
   );
 }
