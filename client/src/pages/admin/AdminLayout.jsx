@@ -57,6 +57,7 @@ export default function AdminLayout() {
         <div className="p-4 border-t border-zinc-800 flex-shrink-0">
           <button
             onClick={handleLogout}
+            aria-label="Log out"
             className="flex items-center gap-3 px-4 py-3 w-full text-left text-red-400 hover:bg-red-500/10 hover:text-red-500 rounded-md transition"
           >
             <LogOut size={20} />

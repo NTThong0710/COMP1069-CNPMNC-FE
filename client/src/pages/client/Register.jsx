@@ -12,7 +12,7 @@ const Step1_Email = ({ formData, onChange, onNext }) => (
         <div><label className="text-white text-sm font-bold">Email address</label><input type="email" name="email" value={formData.email} onChange={onChange} className="w-full p-3 rounded bg-neutral-800 text-white border border-neutral-700 focus:border-green-500 outline-none" required /></div>
         <button type="submit" className="w-full bg-green-500 text-black font-bold py-3 rounded-full hover:bg-green-400">Next</button>
         <div className="text-center"><span className="text-neutral-400">or</span></div>
-        <button type="button" className="w-full bg-white text-black font-bold py-3 rounded-full flex justify-center gap-2"><FaGoogle className="text-red-500 mt-1"/> Sign up with Google</button>
+        <button type="button" aria-label="Sign up with Google" className="w-full bg-white text-black font-bold py-3 rounded-full flex justify-center gap-2"><FaGoogle className="text-red-500 mt-1"/> Sign up with Google</button>
     </form>
 );
 
@@ -24,7 +24,7 @@ const Step2_Password = ({ formData, onChange, onNext }) => {
             <div className="relative">
                 <label className="text-white text-sm font-bold">Password</label>
                 <input type={show?"text":"password"} name="password" value={formData.password} onChange={onChange} className="w-full p-3 rounded bg-neutral-800 text-white border border-neutral-700 focus:border-green-500 outline-none" required minLength={6} />
-                <button type="button" onClick={() => setShow(!show)} className="absolute right-3 top-9 text-neutral-400">{show?<FaEyeSlash/>:<FaEye/>}</button>
+                <button type="button" onClick={() => setShow(!show)} aria-label={show ? "Hide password" : "Show password"} className="absolute right-3 top-9 text-neutral-400">{show?<FaEyeSlash/>:<FaEye/>}</button>
             </div>
             <button type="submit" className="w-full bg-green-500 text-black font-bold py-3 rounded-full hover:bg-green-400">Next</button>
         </form>

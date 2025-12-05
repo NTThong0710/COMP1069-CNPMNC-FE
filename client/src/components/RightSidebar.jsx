@@ -167,7 +167,7 @@ export default function RightSidebar({ song, onClose, onSongSelect }) {
         <span className="font-bold text-base hover:underline cursor-pointer truncate pr-2">
           {song.title || "Now Playing"}
         </span>
-        <button onClick={onClose} className="text-neutral-400 hover:text-white hover:bg-neutral-800 p-1 rounded-full transition">
+        <button onClick={onClose} aria-label="Close sidebar" className="text-neutral-400 hover:text-white hover:bg-neutral-800 p-1 rounded-full transition">
           <X size={20} />
         </button>
       </div>

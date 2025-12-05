@@ -133,6 +133,7 @@ export default function AdminSettings() {
             <button 
                 onClick={handleSave}
                 disabled={loading}
+                aria-label="Save changes"
                 className="bg-white text-black hover:bg-zinc-200 font-bold px-6 py-2 rounded-md flex items-center gap-2 transition disabled:opacity-50"
             >
                 {loading ? "Saving..." : <><Save size={18}/> Save Changes</>}

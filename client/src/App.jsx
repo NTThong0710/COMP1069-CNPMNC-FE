@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Outlet, useLocation, Link, Navigate } from "react-router-dom";
-import { GoHome, GoSearch, GoBook } from "react-icons/go"; // Icon cho Mobile Nav
+import { GoHome, GoSearch, GoBook } from "react-icons/go"; 
 
 // Components & Pages
 import Sidebar from "./components/Sidebar";
@@ -8,6 +8,7 @@ import Header from "./components/Header";
 import PlayerBar from "./components/PlayerBar";
 import PlayerBarActive from "./components/PlayerBarActive";
 import RightSidebar from "./components/RightSidebar";
+import ToastContainer from "./components/ToastContainer";
 import HomePage from "./pages/client/HomePage";
 import AlbumPage from "./pages/client/AlbumPage";
 import SearchPage from "./pages/client/SearchPage";
@@ -23,31 +24,33 @@ import SongPage from "./pages/client/SongPage";
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardHome from "./pages/admin/DashboardHome";
 import SongManager from "./pages/admin/SongManager";
-
-import { useAuth } from "./context/AuthContext";
 import ArtistManager from "./pages/admin/ArtistManager";
 import UserManager from "./pages/admin/UserManager";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AlbumManager from "./pages/admin/AlbumManager";
 
+import { useAuth } from "./context/AuthContext";
+import { useQueue } from "./context/QueueContext";
+import { useToast } from "./context/ToastContext";
+
 const SCROLL_SELECTOR = ".main-content-scroll";
 
-// === COMPONENT MOBILE NAVIGATION (Chỉ hiện trên Mobile) ===
+// === COMPONENT MOBILE NAVIGATION ===
 const MobileNav = () => {
     const location = useLocation();
     const isActive = (path) => location.pathname === path;
     
     return (
         <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-neutral-800 flex justify-around items-center h-16 z-50 pb-safe">
-            <Link to="/" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-white' : 'text-neutral-400'}`}>
+            <Link to="/" aria-label="Home" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-white' : 'text-neutral-400'}`}>
                 <GoHome size={24} />
                 <span className="text-[10px]">Home</span>
             </Link>
-            <Link to="/search" className={`flex flex-col items-center gap-1 ${isActive('/search') ? 'text-white' : 'text-neutral-400'}`}>
+            <Link to="/search" aria-label="Search" className={`flex flex-col items-center gap-1 ${isActive('/search') ? 'text-white' : 'text-neutral-400'}`}>
                 <GoSearch size={24} />
                 <span className="text-[10px]">Search</span>
             </Link>
-            <Link to="/likedSongs" className={`flex flex-col items-center gap-1 ${isActive('/likedSongs') ? 'text-white' : 'text-neutral-400'}`}>
+            <Link to="/likedSongs" aria-label="Library" className={`flex flex-col items-center gap-1 ${isActive('/likedSongs') ? 'text-white' : 'text-neutral-400'}`}>
                 <GoBook size={24} />
                 <span className="text-[10px]">Library</span>
             </Link>
@@ -58,30 +61,38 @@ const MobileNav = () => {
 function AppLayout() {
   const location = useLocation();
   const { user } = useAuth();
+  const { addToast } = useToast();
   const isLoggedIn = !!user;
   const BASE_API_URL = import.meta.env.VITE_API_URL;
 
+  const { queue, getQueueCount } = useQueue();
+
   // State
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false); // Mặc định false trên mọi thiết bị
+  const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false);
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlaylist, setCurrentPlaylist] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentQueueIndex, setCurrentQueueIndex] = useState(0);
   const [isShuffleActive, setShuffleActive] = useState(false);
   const [isRepeatActive, setRepeatActive] = useState(false);
+  const [isNoSongModalOpen, setIsNoSongModalOpen] = useState(false);
 
   const handleToggleSidebarCollapse = () => setIsSidebarCollapsed((prev) => !prev);
   const handleCloseRightSidebar = () => setIsRightSidebarVisible(false);
 
-  // --- LOGIC PHÁT NHẠC & LỊCH SỬ ---
+  // --- LOGIC PHÁT NHẠC ---
   const handleSelectSong = (song, playlist = [], index = 0) => {
+    if (!song) {
+      setIsNoSongModalOpen(true);
+      return;
+    }
     setCurrentSong(song);
     setCurrentPlaylist(playlist.length > 0 ? playlist : [song]);
     setCurrentIndex(index);
     setIsPlaying(true); 
     
-    // Chỉ mở RightSidebar trên Desktop (md trở lên)
     if (window.innerWidth >= 768) {
         setIsRightSidebarVisible(true);
     }
@@ -109,7 +120,26 @@ function AppLayout() {
   const handlePlayPause = () => { if (!currentSong) return; setIsPlaying(!isPlaying); };
 
   const handleNextSong = useCallback(() => {
-    if (currentPlaylist.length === 0) return;
+    if (queue.length > 0) {
+      const nextQueueIndex = currentQueueIndex + 1;
+      if (nextQueueIndex < queue.length) {
+        const nextSong = queue[nextQueueIndex];
+        setCurrentSong(nextSong);
+        setCurrentQueueIndex(nextQueueIndex);
+        setIsPlaying(true);
+        addToast(`Now playing: ${nextSong.title}`, "success", 2000);
+        return;
+      } else {
+        addToast("End of queue reached", "warning", 2000);
+        return;
+      }
+    }
+    
+    if (currentPlaylist.length === 0) {
+      addToast("No songs to play", "warning", 2000);
+      return;
+    }
+    
     let nextIndex;
     if (isShuffleActive) {
       if (currentPlaylist.length === 1) nextIndex = 0;
@@ -123,37 +153,74 @@ function AppLayout() {
     setCurrentIndex(nextIndex);
     setCurrentSong(currentPlaylist[nextIndex]);
     setIsPlaying(true);
-  }, [currentPlaylist, currentIndex, isShuffleActive]);
+  }, [currentPlaylist, currentIndex, isShuffleActive, queue, currentQueueIndex, addToast]);
 
-  const handlePrevSong = () => {
-    if (currentPlaylist.length === 0) return;
+  const handlePrevSong = useCallback(() => {
+    if (queue.length > 0) {
+      const prevQueueIndex = currentQueueIndex - 1;
+      if (prevQueueIndex >= 0) {
+        const prevSong = queue[prevQueueIndex];
+        setCurrentSong(prevSong);
+        setCurrentQueueIndex(prevQueueIndex);
+        setIsPlaying(true);
+        addToast(`Playing previous from queue: ${prevSong.title}`, "success", 2000);
+        return;
+      } else {
+        addToast("Already at the beginning of queue", "warning", 2000);
+        return;
+      }
+    }
+    
+    if (currentPlaylist.length === 0) {
+      addToast("No songs to play", "warning", 2000);
+      return;
+    }
+    
     const prevIndex = currentIndex === 0 ? currentPlaylist.length - 1 : currentIndex - 1;
     setCurrentIndex(prevIndex);
     setCurrentSong(currentPlaylist[prevIndex]);
     setIsPlaying(true);
-  };
+  }, [currentPlaylist, currentIndex, queue, currentQueueIndex, addToast]);
 
-  const handleToggleShuffle = () => setShuffleActive(prev => !prev);
+  const handleToggleShuffle = useCallback(() => {
+    if (queue.length === 0) {
+      addToast("Queue is empty, cannot shuffle", "warning", 2000);
+      return;
+    }
+    const randomIndex = Math.floor(Math.random() * queue.length);
+    const randomSong = queue[randomIndex];
+    setCurrentSong(randomSong);
+    setCurrentQueueIndex(randomIndex);
+    setIsPlaying(true);
+    setShuffleActive(prev => !prev);
+    addToast(`Hiện tại đang phát: ${randomSong.title}`, "success", 2000);
+  }, [queue, addToast]);
+  
   const handleToggleRepeat = () => setRepeatActive(prev => !prev);
+
+  const handlePlayFromQueue = useCallback((queueIndex) => {
+    if (queueIndex >= 0 && queueIndex < queue.length) {
+      const song = queue[queueIndex];
+      setCurrentSong(song);
+      setCurrentQueueIndex(queueIndex);
+      setIsPlaying(true);
+      addToast(`Now playing: ${song.title}`, "success", 2000);
+    }
+  }, [queue, addToast]);
 
   // --- LAYOUT CHÍNH ---
   const mainLayoutContent = (user?.role === 'admin') ? (
       <Navigate to="/admin" replace />
   ) : (
     <div className="bg-black h-screen flex flex-col">
-      
-      {/* 1. HEADER (Ẩn trên mobile nếu muốn, nhưng giữ lại để có nút search) */}
       <div className="hidden md:block">
           <Header isLoggedIn={isLoggedIn} />
       </div>
-      {/* Mobile Header rút gọn */}
       <div className="md:hidden">
           <Header isLoggedIn={isLoggedIn} />
       </div>
       
       <div className="flex-1 flex overflow-hidden relative">
-        
-        {/* 2. SIDEBAR (Chỉ hiện trên Desktop/Tablet) */}
         <div className="hidden md:block h-full">
             <Sidebar
                 isLoggedIn={isLoggedIn}
@@ -162,15 +229,12 @@ function AppLayout() {
             />
         </div>
         
-        {/* 3. MAIN CONTENT */}
         <main className="flex-1 min-w-0 p-0 md:p-2 md:pr-3 relative">
-          {/* Thêm padding bottom trên mobile để tránh bị che bởi PlayerBar và MobileNav */}
           <div className="h-full overflow-y-auto bg-black md:bg-neutral-900 md:rounded-lg main-content-scroll pb-32 md:pb-0">
             <Outlet />
           </div>
         </main>
 
-        {/* 4. RIGHT SIDEBAR (Chỉ hiện trên Desktop và khi được bật) */}
         {isRightSidebarVisible && (
           <div className="hidden md:block w-[360px] flex-shrink-0 transition-all duration-300 p-2 pl-0 h-full">
             <RightSidebar
@@ -182,7 +246,6 @@ function AppLayout() {
         )}
       </div>
 
-      {/* 5. PLAYER BAR (Luôn hiện, nằm trên MobileNav) */}
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40">
           {currentSong ? (
             <PlayerBarActive
@@ -195,15 +258,31 @@ function AppLayout() {
               onToggleShuffle={handleToggleShuffle}
               isRepeatActive={isRepeatActive}
               onToggleRepeat={handleToggleRepeat}
+              queue={queue}
+              queueCount={getQueueCount()}
+              onPlayFromQueue={handlePlayFromQueue}
             />
           ) : (
              !isLoggedIn && <PlayerBar />
           )}
       </div>
 
-      {/* 6. MOBILE NAVIGATION (Thanh điều hướng dưới cùng cho điện thoại) */}
-      <MobileNav />
+      {isNoSongModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[#282828] rounded-2xl p-8 max-w-md w-full mx-4 border border-neutral-700 shadow-2xl">
+            <h2 className="text-2xl font-bold text-white mb-3">No Song Selected</h2>
+            <p className="text-neutral-300 mb-6">Please select a song to play.</p>
+            <button
+              onClick={() => setIsNoSongModalOpen(false)}
+              className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-3 rounded-lg transition"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
 
+      <MobileNav />
     </div>
   );
 
@@ -216,7 +295,10 @@ function AppLayout() {
       
       <Route path="/" element={mainLayoutContent}>
         <Route index element={<HomePage isLoggedIn={isLoggedIn} onSongSelect={handleSelectSong} />} />
-        <Route path="/album/:albumId" element={<AlbumPage onSongSelect={handleSelectSong} />} />
+        
+        {/* --- SỬA LỖI Ở ĐÂY: Dùng :id để khớp với AlbumPage và handleSelectSong --- */}
+        <Route path="/album/:id" element={<AlbumPage onSongSelect={handleSelectSong} />} />
+
         <Route path="/search" element={<SearchPage onSongSelect={handleSelectSong} />} />
         <Route path="/likedSongs" element={<LikedSongs onSongSelect={handleSelectSong} />} />
         <Route path="/playlist/:playlistId" element={<PlaylistPage onSongSelect={handleSelectSong} />} />
@@ -242,6 +324,7 @@ function AppLayout() {
 function App() {
   return (
     <BrowserRouter>
+      <ToastContainer />
       <AppLayout />
     </BrowserRouter>
   );

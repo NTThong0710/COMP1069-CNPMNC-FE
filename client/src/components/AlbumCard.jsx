@@ -1,11 +1,9 @@
 import { FaPlay } from "react-icons/fa";
-import { Link } from 'react-router-dom'; // Import Link
+import { Link } from 'react-router-dom';
 
-// Component nhận thêm prop 'id'
 function AlbumCard({ id, image, title, artist }) {
   return (
-    // Bọc toàn bộ card trong component Link
-    <Link to={`/album/${id}`}>
+    <Link to={`/album/${id}`} aria-label={`Go to album ${title}`}>
       <div className="group relative bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition-all duration-300 cursor-pointer shadow-lg">
         <div className="relative mb-4">
           <img 
@@ -15,6 +13,7 @@ function AlbumCard({ id, image, title, artist }) {
           />
           
           <button 
+            aria-label={`Play album ${title}`}
             className="
               absolute bottom-2 right-2 bg-green-500 p-4 rounded-full shadow-xl flex 
               items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 
@@ -30,6 +29,7 @@ function AlbumCard({ id, image, title, artist }) {
       </div>
     </Link>
   );
+
 }
 
 export default AlbumCard;

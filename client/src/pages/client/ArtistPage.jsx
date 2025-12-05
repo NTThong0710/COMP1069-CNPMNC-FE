@@ -6,124 +6,82 @@ import AlbumCard from '../../components/AlbumCard';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
+// Helper format thời gian (nếu chưa có global helper)
+const formatDuration = (seconds) => {
+    if (!seconds) return "0:00";
+    // Nếu API trả về ms thì chia 1000, nếu giây thì giữ nguyên. Jamendo tracks thường trả về giây.
+    const val = seconds > 10000 ? seconds / 1000 : seconds; 
+    const min = Math.floor(val / 60);
+    const sec = Math.floor(val % 60);
+    return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+};
+
 export default function ArtistPage({ onSongSelect }) {
   const { artistId } = useParams();
   const navigate = useNavigate();
- 
-  // State quản lý dữ liệu và trạng thái loading
+  
+  // State
   const [artist, setArtist] = useState(null);
   const [albums, setAlbums] = useState([]);
   const [topSongs, setTopSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Kiểm tra artistId ngay khi component mount
-  useEffect(() => {
-    if (!artistId) {
-      setError("Artist ID không hợp lệ!");
-      setLoading(false);
-      return;
-    }
-  }, [artistId]);
-
   useEffect(() => {
     const fetchArtistData = async () => {
-      // Kiểm tra lại artistId trước khi fetch
-      if (!artistId) {
-        setError("Artist ID không hợp lệ!");
-        setLoading(false);
-        return;
-      }
+      if (!artistId || !BASE_API_URL) return;
 
       setLoading(true);
       setError(null);
-     
-      if (!BASE_API_URL) {
-        setError("VITE_API_URL chưa được cấu hình trong file .env!");
-        setLoading(false);
-        return;
-      }
 
       try {
-        console.log(`Fetching artist data from: ${BASE_API_URL}/artists/${artistId}`);
+        console.log(`Fetching data for artist: ${artistId}`);
         
-        // 1. LỜI GỌI API CHÍNH: Lấy thông tin nghệ sĩ
+        // --- 1. GỌI API LẤY THÔNG TIN ARTIST ---
         const artistRes = await fetch(`${BASE_API_URL}/artists/${artistId}`);
-        
-        // Kiểm tra content type trước khi parse JSON
-        const contentType = artistRes.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const textResponse = await artistRes.text();
-          console.error('Server trả về non-JSON response:', textResponse.substring(0, 200));
-          throw new Error(`Server trả về định dạng không phải JSON. Có thể endpoint không tồn tại.`);
-        }
-        
         const artistData = await artistRes.json();
-       
-        if (!artistRes.ok) {
-          throw new Error(artistData.message || `HTTP ${artistRes.status}: Không thể tìm thấy nghệ sĩ này.`);
-        }
-       
-        // Cập nhật để phù hợp với cấu trúc API trả về
-        if (artistData.success && artistData.data) {
-          setArtist(artistData.data);
-        } else {
-          throw new Error('Dữ liệu nghệ sĩ không hợp lệ');
-        }
-       
-        // 2. LỜI GỌI API ALBUM: Lấy danh sách Album theo artist
+        
+        if (!artistRes.ok) throw new Error("Không tìm thấy nghệ sĩ");
+        
+        const artistInfo = artistData.data || artistData;
+
+        // --- 2. GỌI API LẤY ALBUMS ---
+        const albumsRes = await fetch(`${BASE_API_URL}/artists/${artistId}/albums`); // Hoặc /albums/artist/${artistId} tùy route bạn chốt
+        const albumsData = await albumsRes.json();
+        const albumsList = (albumsRes.ok && albumsData.success) ? (albumsData.results || []) : [];
+
+        // --- 3. GỌI API LẤY TOP TRACKS (Mới thêm ở Backend) ---
+        let tracksList = [];
         try {
-          const albumsRes = await fetch(`${BASE_API_URL}/artists/${artistId}/albums`);
-          
-          if (albumsRes.ok) {
-            const albumsData = await albumsRes.json();
-            // Cập nhật để phù hợp với cấu trúc API albums mới
-            if (albumsData.success && albumsData.data) {
-              setAlbums(albumsData.data);
-            } else {
-              setAlbums(albumsData || []);
+            const tracksRes = await fetch(`${BASE_API_URL}/artists/${artistId}/top-tracks`);
+            const tracksData = await tracksRes.json();
+            if (tracksRes.ok && tracksData.success) {
+                tracksList = tracksData.tracks.map(t => ({
+                    ...t,
+                    duration: formatDuration(t.duration) // Format lại giờ
+                }));
             }
-          } else {
-            console.warn("Không thể tải Album, sử dụng mảng rỗng.");
-            setAlbums([]);
-          }
-        } catch (albumError) {
-          console.warn("Lỗi khi tải album:", albumError);
-          setAlbums([]);
+        } catch (e) { console.warn("Lỗi fetch top tracks", e); }
+
+        // --- 4. XỬ LÝ ẢNH ĐẠI DIỆN THÔNG MINH ---
+        // Ưu tiên: Ảnh Artist -> Ảnh Album đầu tiên -> Placeholder
+        let bestImage = artistInfo.image;
+        if (!bestImage || bestImage === "") {
+            if (albumsList.length > 0 && albumsList[0].image) {
+                bestImage = albumsList[0].image;
+            } else {
+                bestImage = "https://placehold.co/500x500/282828/white?text=Artist";
+            }
         }
 
-        // 3. MOCK TOP SONGS (tạm thời - có thể thay bằng API thật sau)
-        setTopSongs([
-            { 
-              id: 'm1', 
-              title: 'Top Song 1 (MOCK)', 
-              artist: artistData.data.name, 
-              image: artistData.data.image, 
-              url: '/mock-1.mp3', 
-              duration: '3:00' 
-            },
-            { 
-              id: 'm2', 
-              title: 'Top Song 2 (MOCK)', 
-              artist: artistData.data.name, 
-              image: artistData.data.image, 
-              url: '/mock-2.mp3', 
-              duration: '4:00' 
-            },
-            { 
-              id: 'm3', 
-              title: 'Popular Track (MOCK)', 
-              artist: artistData.data.name, 
-              image: artistData.data.image, 
-              url: '/mock-3.mp3', 
-              duration: '3:30' 
-            },
-        ]);
+        // Set State
+        setArtist({ ...artistInfo, image: bestImage });
+        setAlbums(albumsList);
+        setTopSongs(tracksList);
 
       } catch (err) {
-        console.error("API Fetch Error:", err);
+        console.error("API Error:", err);
         setError(err.message);
-        setArtist(null);
       } finally {
         setLoading(false);
       }
@@ -132,162 +90,170 @@ export default function ArtistPage({ onSongSelect }) {
     fetchArtistData();
   }, [artistId]);
 
-  // Sửa hàm xử lý click để tránh re-render
   const handlePlayClick = () => {
-    if (topSongs.length > 0) {
+    if (topSongs.length > 0 && onSongSelect) {
       onSongSelect(topSongs[0], topSongs, 0);
     }
   };
 
   const handleSongClick = (track, index) => {
-    onSongSelect(track, topSongs, index);
+    if(onSongSelect) onSongSelect(track, topSongs, index);
   };
  
-  // Conditional Rendering cho trạng thái
-  if (loading) {
-    return (
-        <main className="p-8">
-            
-        </main>
-    );
-  }
+  // --- RENDERING ---
+  
+  if (loading) return (
+      <main className="p-8 h-screen bg-neutral-900 flex items-center justify-center">
+           <div className="w-10 h-10 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+      </main>
+  );
 
-  if (error || !artist) {
-    return (
-        <main className="p-8">
-            <h1 className="text-4xl font-bold text-white">Artist not found!</h1>
-            {error && (
-              <div className="text-red-500 mt-4">
-                <p className="font-bold">Lỗi kết nối:</p>
-                <p>{error}</p>
-                <p className="mt-2 text-sm">Vui lòng kiểm tra:</p>
-                <ul className="list-disc list-inside text-sm mt-1">
-                  <li>Artist ID: {artistId || 'Không có'}</li>
-                  <li>Endpoint API có đúng không</li>
-                  <li>Server có đang chạy không</li>
-                </ul>
-                <button 
-                  onClick={() => navigate(-1)}
-                  className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
-                >
-                  Quay lại
-                </button>
-              </div>
-            )}
-        </main>
-    );
-  }
+  if (error || !artist) return (
+      <main className="p-8 h-screen bg-neutral-900 text-white">
+          <h1 className="text-4xl font-bold">Artist not found!</h1>
+          <button onClick={() => navigate(-1)} className="mt-4 px-4 py-2 bg-white text-black rounded">Quay lại</button>
+      </main>
+  );
 
-  // ✅ SỬ DỤNG DỮ LIỆU TỪ API
   return (
-    <main className="bg-neutral-900 overflow-hidden pb-16">
-      {/* PHẦN HEADER */}
+    <main className="bg-neutral-900 overflow-hidden pb-16 min-h-screen">
+      {/* HEADER */}
       <div className="relative h-[400px] flex flex-col justify-end p-8">
-        <img
-          src={artist.image}
-          alt={artist.name}
-          className="absolute inset-0 w-full h-full object-cover object-center"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-        <div className="relative">
+        <div 
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: `url(${artist.image})` }}
+        >
+             <div className="absolute inset-0 bg-gradient-to-t from-neutral-900 via-neutral-900/20 to-transparent" />
+        </div>
+        
+        <div className="relative z-10">
             <div className="flex items-center gap-2 mb-2">
-<div className="flex items-center justify-center w-7 h-7 rounded-full bg-[#1DA1F2]">
-  <BadgeCheck className="text-white" size={16} />
-</div>
-
-                <span className="text-sm font-bold text-white">Verified Artist</span>
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-[#1DA1F2] shadow-lg">
+                  <BadgeCheck className="text-white" size={16} />
+                </div>
+                <span className="text-sm font-bold text-white drop-shadow-md">Verified Artist</span>
             </div>
-            <h1 className="text-9xl font-black text-white">{artist.name}</h1>
-            <p className="text-white mt-4 text-lg font-medium">
-              Joined: {new Date(artist.joindate).toLocaleDateString()} • 
-              {albums.length > 0 && ` ${albums.length} Album${albums.length > 1 ? 's' : ''}`}
+            <h1 className="text-6xl md:text-8xl font-black text-white shadow-lg drop-shadow-lg mb-4">{artist.name}</h1>
+            <p className="text-white mt-4 text-lg font-medium drop-shadow-md">
+              Joined: {artist.joindate ? new Date(artist.joindate).toLocaleDateString() : 'Unknown'} • 
+              {albums.length} Albums
             </p>
         </div>
       </div>
 
-      {/* PHẦN NỘI DUNG */}
-      <div className="p-8">
+      {/* CONTENT */}
+      <div className="p-8 bg-gradient-to-b from-neutral-900/60 to-neutral-900">
+        
+        {/* Action Buttons */}
         <div className="flex items-center gap-6 mb-8">
-          <button
-            onClick={handlePlayClick}
-            className="bg-green-500 w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform"
-          >
-            <FaPlay size={20} className="text-black ml-1" />
+          <button onClick={handlePlayClick} disabled={topSongs.length === 0} className="bg-green-500 w-14 h-14 rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-lg pl-1 disabled:opacity-50">
+            <FaPlay size={20} className="text-black" />
           </button>
-          <button 
-            className="border border-white/50 text-white font-bold px-6 py-2 rounded-md hover:border-white transition"
-            onClick={(e) => e.preventDefault()} // Ngăn chặn hành vi mặc định
-          >
+          <button className="border border-white/50 text-white font-bold px-6 py-2 rounded-full hover:border-white transition uppercase text-xs tracking-widest">
             Following
           </button>
-          <button 
-            className="text-neutral-400 hover:text-white"
-            onClick={(e) => e.preventDefault()} // Ngăn chặn hành vi mặc định
-          >
-            <MoreHorizontal size={28} />
-          </button>
+          <button className="text-neutral-400 hover:text-white transition"><MoreHorizontal size={32} /></button>
         </div>
 
-        {/* Tiểu sử (Bio) */}
-        <div className="mb-12">
+        {/* About */}
+        <div className="mb-12 max-w-2xl">
             <h2 className="text-2xl font-bold text-white mb-4">About</h2>
-            <p className="text-neutral-300 leading-relaxed">
-              Website: <a href={artist.website} target="_blank" rel="noopener noreferrer" className="text-white underline hover:text-green-400 transition">{artist.website}</a>
-            </p>
-            <p className="text-neutral-300 leading-relaxed mt-2">
-              Profile: <a href={artist.shorturl} target="_blank" rel="noopener noreferrer" className="text-white underline hover:text-green-400 transition">{artist.shorturl}</a>
-            </p>
-        </div>
-
-        {/* Discography - Album */}
-        <h2 className="text-2xl font-bold text-white mb-4">Discography</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-            {albums.length > 0 ? albums.map(album => (
-                <AlbumCard 
-                  key={album.id}
-                  id={album.id}
-                  name={album.name}
-                  artist_name={album.artist_name}
-                  releasedate={album.releasedate}
-                  image={album.image}
-                  genre={album.genre}
-                  shareurl={album.shareurl}
-                />
-            )) : (
-              <div className="col-span-full text-center py-8">
-                <p className="text-neutral-400 text-lg">Không có Album nào được tìm thấy.</p>
-              </div>
+            {artist.website && (
+                <p className="text-neutral-300 mb-1"><span className="text-neutral-500 mr-2">Website:</span><a href={artist.website} target="_blank" rel="noreferrer" className="text-white hover:underline">{artist.website}</a></p>
             )}
         </div>
 
-        {/* Thống kê */}
-        {albums.length > 0 && (
-          <div className="mt-8 p-6 bg-neutral-800 rounded-lg">
-            <h3 className="text-xl font-bold text-white mb-4">Artist Statistics</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">{albums.length}</p>
-                <p className="text-neutral-400">Albums</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">{topSongs.length}</p>
-                <p className="text-neutral-400">Popular Tracks</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">
-                  {new Date().getFullYear() - new Date(artist.joindate).getFullYear()}
-                </p>
-                <p className="text-neutral-400">Years Active</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-white">
-                  {artist.genre || 'Various'}
-                </p>
-                <p className="text-neutral-400">Genre</p>
-              </div>
+        {/* Popular Tracks (Real Data) */}
+        {topSongs.length > 0 && (
+            <div className="mb-12">
+                <h2 className="text-2xl font-bold text-white mb-4">Popular Tracks</h2>
+                <div className="flex flex-col gap-1">
+                    {topSongs.map((song, index) => (
+                        <div key={song.id} onClick={() => handleSongClick(song, index)} className="flex items-center gap-4 p-3 rounded-md hover:bg-white/10 cursor-pointer group transition-colors">
+                            <div className="w-6 text-center text-neutral-400">
+                                <span className="group-hover:hidden">{index + 1}</span>
+                                <FaPlay size={12} className="hidden group-hover:block text-white" />
+                            </div>
+                            <img src={song.image || artist.image} className="w-10 h-10 object-cover rounded shadow-sm" alt={song.title} />
+                            <div className="flex-1">
+                                <p className="text-white font-medium text-base hover:underline">{song.title}</p>
+                                <p className="text-neutral-400 text-sm">{artist.name}</p>
+                            </div>
+                            <div className="text-neutral-400 text-sm font-variant-numeric tabular-nums">{song.duration}</div>
+                        </div>
+                    ))}
+                </div>
             </div>
-          </div>
         )}
+
+        {/* Discography */}
+        <h2 className="text-2xl font-bold text-white mb-6">Discography</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
+    {albums.length > 0 ? albums.map(album => {
+        // --- LOGIC XỬ LÝ ẢNH ALBUM ---
+        // 1. Lấy ảnh album
+        // 2. Nếu ko có -> lấy ảnh artist
+        // 3. Nếu ko có nốt -> lấy ảnh mặc định
+        const albumCover = album.image || artist.image || "https://placehold.co/300x300/282828/white?text=Album";
+
+        return (
+            <div 
+                key={album.id} 
+                onClick={() => navigate(`/album/${album.id}`)}
+                className="cursor-pointer bg-[#181818] hover:bg-[#282828] p-4 rounded-lg transition duration-300 group"
+            >
+                <AlbumCard 
+                    id={album.id}
+                    title={album.name}
+                    artist={artist.name}
+                    image={albumCover} // <-- Truyền ảnh đã xử lý vào đây
+                    releasedate={album.releasedate}
+                />
+            </div>
+        );
+    }) : (
+        <p className="text-neutral-400 col-span-full">Chưa có album nào.</p>
+    )}
+</div>
+
+        {/* Stats */}
+        {/* Thống kê */}
+{albums.length > 0 && (
+  <div className="p-8 bg-neutral-800/50 rounded-2xl border border-white/5 mt-8">
+    <h3 className="text-xl font-bold text-white mb-6">Artist Stats</h3>
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+      {/* 1. ALBUMS */}
+      <div className="text-center">
+        <p className="text-3xl font-black text-white mb-1">{albums.length}</p>
+        <p className="text-neutral-400 text-sm uppercase tracking-wider">Albums</p>
+      </div>
+
+      {/* 2. TRACKS */}
+      <div className="text-center">
+        <p className="text-3xl font-black text-white mb-1">{topSongs.length}</p>
+        <p className="text-neutral-400 text-sm uppercase tracking-wider">Top Tracks</p>
+      </div>
+
+      {/* 3. YEARS ACTIVE */}
+      <div className="text-center">
+        <p className="text-3xl font-black text-white mb-1">
+          {artist.joindate ? new Date().getFullYear() - new Date(artist.joindate).getFullYear() : 1}
+        </p>
+        <p className="text-neutral-400 text-sm uppercase tracking-wider">Years Active</p>
+      </div>
+
+{/* 4. FOLLOWERS (SỬA LẠI Ô CUỐI CÙNG) */}
+<div className="text-center">
+  <p className="text-3xl font-black text-white mb-1 truncate px-2 text-green-400">
+    {/* Format số: 1,200 */}
+    {artist.followers ? artist.followers.toLocaleString() : 0}
+  </p>
+  <p className="text-neutral-400 text-sm uppercase tracking-wider">Followers</p>
+</div>
+    </div>
+  </div>
+)}
+
       </div>
     </main>
   );

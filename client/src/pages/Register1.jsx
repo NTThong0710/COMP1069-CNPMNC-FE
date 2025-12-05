@@ -58,6 +58,7 @@ const Register1 = () => {
                             <button
                                 type="button"
                                 onClick={togglePasswordVisibility}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
                                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-neutral-400 hover:text-white text-sm"
                             >
                                 {showPassword ? "Ẩn" : "Hiện"}
@@ -91,6 +92,7 @@ const Register1 = () => {
                         <button
                             type="submit"
                             disabled={!isPasswordValid}
+                            aria-label="Go to next register step"
                             className={`w-full font-bold py-3 rounded-full transition duration-300 ${isPasswordValid
                                 ? 'bg-green-500 text-black hover:bg-green-400'
                                 : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'

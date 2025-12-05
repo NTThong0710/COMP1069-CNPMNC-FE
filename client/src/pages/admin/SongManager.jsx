@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Loader2, X, ChevronLeft, ChevronRight, Music, PlayCircle, Star, Calendar, BarChart2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, X, ChevronLeft, ChevronRight, Music, PlayCircle, Star, Calendar, BarChart2, AlertTriangle } from "lucide-react";
+import { useToast } from "../../context/ToastContext"; // 1. Import Toast
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 export default function SongManager() {
+  const { addToast } = useToast(); // 2. Hook Toast
+
   // === STATE ===
   const [activeTab, setActiveTab] = useState("all"); 
   const [loading, setLoading] = useState(false);
@@ -18,15 +21,19 @@ export default function SongManager() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Modal & Form
+  // Modal Create
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // State Modal Delete (Mới)
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, title: "" });
+
   const [artistsList, setArtistsList] = useState([]);
   const [albumsList, setAlbumsList] = useState([]);
   const [formData, setFormData] = useState({
       title: "", genre: "", cover: "", url: "", duration: 0, lyric: "", artist: "", album: ""
   });
 
-  // === 1. FETCHING LOGIC ===
+  // === 1. FETCHING LOGIC (Giữ nguyên) ===
   const fetchAllSongs = async (currentPage = 1) => {
     setLoading(true);
     try {
@@ -64,17 +71,37 @@ export default function SongManager() {
     fetchDropdownData();
   }, [page, activeTab]);
 
-  // === 2. HANDLERS ===
-  const handleDelete = async (id) => {
-      if(!window.confirm("Are you sure?")) return;
+  // === 2. HANDLERS (Đã sửa dùng Toast & Modal) ===
+  
+  // Mở Modal Xóa
+  const handleOpenDelete = (song) => {
+      setDeleteModal({ isOpen: true, id: song._id, title: song.title });
+  };
+
+  // Xác nhận Xóa
+  const confirmDelete = async () => {
+      const id = deleteModal.id;
+      if (!id) return;
+
       try {
           const token = localStorage.getItem("accessToken");
-          await fetch(`${BASE_API_URL}/songs/${id}`, { 
-              method: 'DELETE', headers: { "Authorization": `Bearer ${token}` } 
+          const res = await fetch(`${BASE_API_URL}/songs/${id}`, { 
+              method: 'DELETE', 
+              headers: { "Authorization": `Bearer ${token}` } 
           });
-          fetchAllSongs(page);
-          fetchSpecialLists();
-      } catch (e) { alert("Error deleting"); }
+          
+          if (res.ok) {
+              addToast("Đã xóa bài hát thành công", "success");
+              fetchAllSongs(page);
+              fetchSpecialLists();
+          } else {
+              addToast("Xóa bài hát thất bại", "error");
+          }
+      } catch (e) { 
+          addToast("Lỗi kết nối server", "error");
+      } finally {
+          setDeleteModal({ isOpen: false, id: null, title: "" });
+      }
   };
 
   const handleCreate = async (e) => {
@@ -82,21 +109,26 @@ export default function SongManager() {
       try {
           const token = localStorage.getItem("accessToken");
           const payload = { ...formData, duration: Number(formData.duration) };
+          
           const res = await fetch(`${BASE_API_URL}/songs`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
               body: JSON.stringify(payload)
           });
+          
           if(res.ok) {
-              alert("Song created!");
+              addToast("Tạo bài hát thành công!", "success");
               setIsModalOpen(false);
               fetchAllSongs(1);
               fetchSpecialLists();
               setFormData({ title: "", genre: "", cover: "", url: "", duration: 0, lyric: "", artist: "", album: "" });
           } else {
-              alert("Failed to create song");
+              addToast("Tạo bài hát thất bại", "error");
           }
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+          console.error(e);
+          addToast("Lỗi kết nối server", "error");
+      }
   };
 
   // === 3. RENDER TABLE ===
@@ -122,7 +154,7 @@ export default function SongManager() {
                         <tr key={song._id} className="border-b border-zinc-800/50 hover:bg-zinc-900 transition">
                             <td className="px-6 py-4">{index + 1}</td>
                             
-                            {/* CỘT 1: SONG (Ảnh vuông + Tên) */}
+                            {/* CỘT 1: SONG */}
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-3">
                                     <img src={song.cover || "https://placehold.co/40"} alt="" className="w-10 h-10 rounded object-cover bg-zinc-800"/>
@@ -133,10 +165,9 @@ export default function SongManager() {
                                 </div>
                             </td>
 
-                            {/* CỘT 2: ARTIST (Ảnh tròn + Tên) */}
+                            {/* CỘT 2: ARTIST */}
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
-                                    {/* Check xem có object artist không */}
                                     {typeof song.artist === 'object' ? (
                                         <>
                                             <img 
@@ -156,7 +187,7 @@ export default function SongManager() {
                             {showExtraInfo === 'views' && <td className="px-6 py-4 text-green-500 font-bold">{song.playCount || 0}</td>}
                             {showExtraInfo === 'date' && <td className="px-6 py-4">{new Date(song.createdAt).toLocaleDateString()}</td>}
 
-                            {/* CỘT 3: ALBUM (Ảnh vuông nhỏ + Tên) */}
+                            {/* CỘT 3: ALBUM */}
                             <td className="px-6 py-4">
                                 <div className="flex items-center gap-2">
                                     {typeof song.album === 'object' ? (
@@ -174,8 +205,15 @@ export default function SongManager() {
                                 </div>
                             </td>
                             
+                            {/* CỘT ACTION: Gọi Modal Delete */}
                             <td className="px-6 py-4 text-right">
-                                <button onClick={() => handleDelete(song._id)} className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-red-400 transition"><Trash2 size={16}/></button>
+                                <button 
+                                    onClick={() => handleOpenDelete(song)} 
+                                    aria-label="Delete song" 
+                                    className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-red-400 transition"
+                                >
+                                    <Trash2 size={16}/>
+                                </button>
                             </td>
                         </tr>
                     ))
@@ -189,17 +227,18 @@ export default function SongManager() {
 
   return (
     <div className="space-y-6 pb-10">
-      {/* Header & Search & Tabs & Modal giữ nguyên như cũ */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div><h1 className="text-3xl font-bold text-white">Songs Manager</h1><p className="text-zinc-400 text-sm mt-1">Manage your music database.</p></div>
-        <button onClick={() => setIsModalOpen(true)} className="bg-white text-black hover:bg-zinc-200 font-medium px-4 py-2 rounded-md flex items-center gap-2 transition shadow-lg"><Plus size={18} /> Add New Song</button>
+        <button onClick={() => setIsModalOpen(true)} aria-label="Add new song" className="bg-white text-black hover:bg-zinc-200 font-medium px-4 py-2 rounded-md flex items-center gap-2 transition shadow-lg"><Plus size={18} /> Add New Song</button>
       </div>
 
+      {/* Tabs */}
       <div className="flex border-b border-zinc-800 gap-6">
-          <button onClick={() => setActiveTab("all")} className={`pb-3 text-sm font-medium transition border-b-2 ${activeTab === "all" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}>All Songs</button>
-          <button onClick={() => setActiveTab("most")} className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "most" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><BarChart2 size={16}/> Most Played</button>
-          <button onClick={() => setActiveTab("new")} className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "new" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><Calendar size={16}/> New Releases</button>
-          <button onClick={() => setActiveTab("top")} className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "top" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><Star size={16}/> Top Songs</button>
+          <button onClick={() => setActiveTab("all")} aria-label="Show all songs" className={`pb-3 text-sm font-medium transition border-b-2 ${activeTab === "all" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}>All Songs</button>
+          <button onClick={() => setActiveTab("most")} aria-label="Show most played songs" className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "most" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><BarChart2 size={16}/> Most Played</button>
+          <button onClick={() => setActiveTab("new")} aria-label="Show new release songs" className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "new" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><Calendar size={16}/> New Releases</button>
+          <button onClick={() => setActiveTab("top")} aria-label="Show top songs" className={`pb-3 text-sm font-medium transition border-b-2 flex items-center gap-2 ${activeTab === "top" ? "border-green-500 text-white" : "border-transparent text-zinc-400 hover:text-zinc-200"}`}><Star size={16}/> Top Songs</button>
       </div>
 
       <div className="border border-zinc-800 rounded-lg overflow-hidden bg-zinc-950">
@@ -213,9 +252,9 @@ export default function SongManager() {
                 </div>
                 {renderTable(allSongs.filter(s => s.title.toLowerCase().includes(searchTerm.toLowerCase())), null)}
                 <div className="flex justify-end items-center gap-4 p-4 border-t border-zinc-800 bg-zinc-900/50">
-                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} className="p-2 rounded-md bg-zinc-800 text-white disabled:opacity-50 hover:bg-zinc-700"><ChevronLeft size={18} /></button>
+                    <button disabled={page <= 1} onClick={() => setPage(p => p - 1)} aria-label="Previous page" className="p-2 rounded-md bg-zinc-800 text-white disabled:opacity-50 hover:bg-zinc-700"><ChevronLeft size={18} /></button>
                     <span className="text-sm text-zinc-400">Page {page} of {totalPages}</span>
-                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} className="p-2 rounded-md bg-zinc-800 text-white disabled:opacity-50 hover:bg-zinc-700"><ChevronRight size={18} /></button>
+                    <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)} aria-label="Next page" className="p-2 rounded-md bg-zinc-800 text-white disabled:opacity-50 hover:bg-zinc-700"><ChevronRight size={18} /></button>
                 </div>
              </>
          )}
@@ -224,13 +263,14 @@ export default function SongManager() {
          {activeTab === "top" && renderTable(topSongs, null)}
       </div>
 
-      {/* Modal giữ nguyên */}
+      {/* Modal Create (Giữ nguyên) */}
       {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="bg-zinc-950 border border-zinc-800 w-full max-w-2xl rounded-xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh]">
-                  <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white"><X/></button>
+                  <button onClick={() => setIsModalOpen(false)} aria-label="Close modal" className="absolute top-4 right-4 text-zinc-400 hover:text-white"><X/></button>
                   <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Music size={24} className="text-green-500"/> Add New Song</h2>
                   <form onSubmit={handleCreate} className="space-y-4">
+                      {/* ... (Các field form giữ nguyên) ... */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div><label className="block text-xs font-bold text-zinc-400 mb-1.5">Title *</label><input type="text" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} /></div>
                           <div><label className="block text-xs font-bold text-zinc-400 mb-1.5">Genre</label><input type="text" className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.genre} onChange={e => setFormData({...formData, genre: e.target.value})} /></div>
@@ -245,10 +285,45 @@ export default function SongManager() {
                         <div><label className="block text-xs font-bold text-zinc-400 mb-1.5">Duration (s)</label><input type="number" className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.duration} onChange={e => setFormData({...formData, duration: e.target.value})} /></div>
                       </div>
                       <div><label className="block text-xs font-bold text-zinc-400 mb-1.5">Lyrics</label><textarea rows={4} className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.lyric} onChange={e => setFormData({...formData, lyric: e.target.value})} /></div>
-                      <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-sm">Cancel</button><button type="submit" className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition">Create Song</button></div>
+                      <div className="flex justify-end gap-3 pt-2"><button type="button" onClick={() => setIsModalOpen(false)} aria-label="Cancel" className="px-4 py-2 rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-sm">Cancel</button><button type="submit" aria-label="Create song" className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition">Create Song</button></div>
                   </form>
               </div>
           </div>
+      )}
+
+      {/* MODAL DELETE (Mới thêm) */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm bg-[#18181b] border border-zinc-800 rounded-xl p-6 text-center transform scale-100 transition-all shadow-2xl">
+                <div className="flex justify-center mb-4">
+                    <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="text-red-500 w-6 h-6" />
+                    </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-white mb-2">Delete Song?</h3>
+                <p className="text-zinc-400 mb-6 text-sm">
+                    Are you sure you want to delete <br/>
+                    <span className="text-white font-bold">"{deleteModal.title}"</span>?
+                    <br/>This action cannot be undone.
+                </p>
+                
+                <div className="flex gap-3 justify-center">
+                    <button 
+                        onClick={() => setDeleteModal({ isOpen: false, id: null, title: "" })}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 transition min-w-[100px]"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-900/20 min-w-[100px]"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );

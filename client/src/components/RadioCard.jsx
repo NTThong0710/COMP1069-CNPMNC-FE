@@ -15,6 +15,7 @@ function RadioCard({ image, title, artists, bgColor }) {
 
       {/* Nút Play - Đặt ở góc dưới bên phải của cả cái card */}
       <button 
+        aria-label={`Play radio station ${title}`}
         className="
           absolute 
           bottom-4 

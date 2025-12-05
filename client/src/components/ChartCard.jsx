@@ -16,6 +16,7 @@ function ChartCard({ title, subtitle, description, bgColor }) {
 
       {/* Nút Play - Xuất hiện khi hover vào cả cái card */}
       <button 
+        aria-label={`Play ${title}`}
         className="
           absolute 
           bottom-4 

@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Loader2, X, ChevronLeft, ChevronRight, Disc, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, X, ChevronLeft, ChevronRight, Disc, Calendar, AlertTriangle } from "lucide-react";
+import { useToast } from "../../context/ToastContext"; 
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 export default function AlbumManager() {
+  const { addToast } = useToast();
+
   // === STATE ===
   const [albums, setAlbums] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,38 +20,39 @@ export default function AlbumManager() {
   // Dropdown Data
   const [artistsList, setArtistsList] = useState([]);
 
-  // Modal & Form
+  // Modal Create State
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Modal Delete State
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, title: "" });
+
   const [formData, setFormData] = useState({
       title: "",
-      artist: "", // ID artist
+      artist: "", 
       cover: "",
       release_date: "",
-      genre: "Pop"
+      genre: "Pop" // Vẫn giữ default value để gửi API không bị lỗi
   });
 
   // === 1. FETCH DATA ===
   const fetchAlbums = async (currentPage = 1) => {
     setLoading(true);
     try {
-      // API get albums có phân trang
       const res = await fetch(`${BASE_API_URL}/albums?page=${currentPage}&limit=10`);
       const data = await res.json();
       
-      // Backend trả về { albums: [...], total, totalPages } hoặc { data: [...] } tùy controller
-      // Dựa vào code cũ: res.json({ ... data: albums })
-      if (data.data || data.albums) {
-          setAlbums(data.data || data.albums || []);
+      if (data.data || data.albums || data.results) {
+          setAlbums(data.data || data.albums || data.results || []);
           setTotalPages(data.totalPages || 1);
       }
     } catch (error) {
       console.error("Failed to fetch albums", error);
+      addToast("Lỗi tải danh sách album", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Lấy danh sách Artist để bỏ vào dropdown chọn
   const fetchArtists = async () => {
       try {
           const res = await fetch(`${BASE_API_URL}/artists?limit=100`);
@@ -63,8 +67,19 @@ export default function AlbumManager() {
   }, [page]);
 
   // === 2. HANDLERS ===
-  const handleDelete = async (id) => {
-      if(!window.confirm("Are you sure you want to delete this album?")) return;
+  
+  const handleOpenDelete = (album) => {
+      setDeleteModal({ 
+          isOpen: true, 
+          id: album.id || album._id, 
+          title: album.title || album.name 
+      });
+  };
+
+  const confirmDelete = async () => {
+      const id = deleteModal.id;
+      if (!id) return;
+
       try {
           const token = localStorage.getItem("accessToken");
           const res = await fetch(`${BASE_API_URL}/albums/${id}`, { 
@@ -72,9 +87,18 @@ export default function AlbumManager() {
               headers: { "Authorization": `Bearer ${token}` } 
           });
           
-          if (res.ok) fetchAlbums(page);
-          else alert("Delete failed");
-      } catch (e) { console.error(e); }
+          if (res.ok) {
+              addToast("Xóa album thành công", "success");
+              fetchAlbums(page);
+          } else {
+              addToast("Xóa album thất bại", "error");
+          }
+      } catch (e) { 
+          console.error(e);
+          addToast("Lỗi kết nối server", "error");
+      } finally {
+          setDeleteModal({ isOpen: false, id: null, title: "" });
+      }
   };
 
   const handleCreate = async (e) => {
@@ -92,25 +116,25 @@ export default function AlbumManager() {
           });
 
           if(res.ok) {
-              alert("Album created successfully!");
+              addToast("Tạo album thành công!", "success");
               setIsModalOpen(false);
               fetchAlbums(1);
-              // Reset Form
               setFormData({ title: "", artist: "", cover: "", release_date: "", genre: "Pop" });
           } else {
-              alert("Failed to create album");
+              const err = await res.json();
+              addToast(err.message || "Tạo album thất bại", "error");
           }
       } catch (e) { 
           console.error(e); 
+          addToast("Lỗi kết nối server", "error");
       } finally {
           setIsSubmitting(false);
       }
   };
 
-  // Filter Client-side
   const filteredAlbums = albums.filter(a => 
-      a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (typeof a.artist === 'object' ? a.artist?.name : "").toLowerCase().includes(searchTerm.toLowerCase())
+      (a.title || a.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (typeof a.artist === 'object' ? a.artist?.name : (a.artist_name || "")).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -123,6 +147,7 @@ export default function AlbumManager() {
         </div>
         <button 
             onClick={() => setIsModalOpen(true)}
+            aria-label="Add new album"
             className="bg-white text-black hover:bg-zinc-200 font-medium px-4 py-2 rounded-md flex items-center gap-2 transition shadow-lg"
         >
             <Plus size={18} /> Add New Album
@@ -150,20 +175,19 @@ export default function AlbumManager() {
                         <th className="px-6 py-3">#</th>
                         <th className="px-6 py-3">Album Info</th>
                         <th className="px-6 py-3">Artist</th>
-                        <th className="px-6 py-3">Genre</th>
+                        {/* Đã xóa cột Genre */}
                         <th className="px-6 py-3">Release Date</th>
                         <th className="px-6 py-3 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {loading ? (
-                        <tr><td colSpan="6" className="px-6 py-8 text-center"><Loader2 className="animate-spin inline mr-2"/> Loading...</td></tr>
+                        <tr><td colSpan="5" className="px-6 py-8 text-center"><Loader2 className="animate-spin inline mr-2"/> Loading...</td></tr>
                     ) : filteredAlbums.length > 0 ? (
                         filteredAlbums.map((album, index) => (
                             <tr key={album._id || album.id} className="border-b border-zinc-800/50 hover:bg-zinc-900 transition">
                                 <td className="px-6 py-4">{index + 1}</td>
                                 
-                                {/* Cột Album: Ảnh + Tên */}
                                 <td className="px-6 py-4">
                                     <div className="flex items-center gap-3">
                                         <img 
@@ -176,27 +200,30 @@ export default function AlbumManager() {
                                 </td>
                                 
                                 <td className="px-6 py-4 text-zinc-300">
-                                    {typeof album.artist === 'object' ? album.artist?.name : "Unknown"}
+                                    {typeof album.artist === 'object' ? album.artist?.name : (album.artist_name || "Unknown")}
                                 </td>
 
-                                <td className="px-6 py-4">
-                                    {Array.isArray(album.genre) ? album.genre.join(", ") : (album.genre || "-")}
-                                </td>
+                                {/* Đã xóa cột Genre ở đây */}
 
                                 <td className="px-6 py-4">
-                                    {album.release_date || album.releaseDate ? new Date(album.release_date || album.releaseDate).toLocaleDateString() : "-"}
+                                    {album.release_date || album.releaseDate || album.releasedate ? new Date(album.release_date || album.releaseDate || album.releasedate).toLocaleDateString() : "-"}
                                 </td>
                                 
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
                                         <button className="p-2 hover:bg-zinc-800 rounded-md text-blue-400 transition"><Pencil size={16}/></button>
-                                        <button onClick={() => handleDelete(album._id || album.id)} className="p-2 hover:bg-zinc-800 rounded-md text-red-400 transition"><Trash2 size={16}/></button>
+                                        <button 
+                                            onClick={() => handleOpenDelete(album)} 
+                                            className="p-2 hover:bg-zinc-800 rounded-md text-red-400 transition"
+                                        >
+                                            <Trash2 size={16}/>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
                         ))
                     ) : (
-                        <tr><td colSpan="6" className="px-6 py-8 text-center text-zinc-600">No albums found.</td></tr>
+                        <tr><td colSpan="5" className="px-6 py-8 text-center text-zinc-600">No albums found.</td></tr>
                     )}
                 </tbody>
             </table>
@@ -215,61 +242,77 @@ export default function AlbumManager() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh]">
                   <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white"><X/></button>
-                  
-                  <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                      <Disc size={24} className="text-green-500"/> Add New Album
-                  </h2>
+                  <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Disc size={24} className="text-green-500"/> Add New Album</h2>
                   
                   <form onSubmit={handleCreate} className="space-y-4">
                       <div>
                           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Album Title *</label>
-                          <input type="text" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none transition" 
-                                 value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+                          <input type="text" required className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none transition" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                       </div>
                       
                       <div>
                           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Artist *</label>
-                          <select required className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none transition"
-                                  value={formData.artist} onChange={e => setFormData({...formData, artist: e.target.value})}>
+                          <select required className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none transition" value={formData.artist} onChange={e => setFormData({...formData, artist: e.target.value})}>
                               <option value="">-- Select Artist --</option>
-                              {artistsList.map(a => (
-                                  <option key={a._id || a.id} value={a._id || a.id}>{a.name}</option>
-                              ))}
+                              {artistsList.map(a => (<option key={a._id || a.id} value={a._id || a.id}>{a.name}</option>))}
                           </select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Genre</label>
-                            <input type="text" className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" 
-                                   value={formData.genre} onChange={e => setFormData({...formData, genre: e.target.value})} />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Release Date</label>
-                            <input type="date" className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" 
-                                   value={formData.release_date} onChange={e => setFormData({...formData, release_date: e.target.value})} />
-                        </div>
+                      {/* Đã xóa ô nhập Genre, nhưng vẫn giữ Release Date */}
+                      <div>
+                          <label className="block text-xs font-bold text-zinc-400 mb-1.5">Release Date</label>
+                          <input type="date" className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.release_date} onChange={e => setFormData({...formData, release_date: e.target.value})} />
                       </div>
 
                       <div>
                           <label className="block text-xs font-bold text-zinc-400 mb-1.5">Cover Image URL</label>
-                          <input type="text" placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" 
-                                 value={formData.cover} onChange={e => setFormData({...formData, cover: e.target.value})} />
+                          <input type="text" placeholder="https://..." className="w-full bg-zinc-900 border border-zinc-800 rounded-md p-2.5 text-white focus:border-green-500 outline-none" value={formData.cover} onChange={e => setFormData({...formData, cover: e.target.value})} />
                       </div>
-
+                      
                       <div className="flex justify-end gap-3 pt-4">
                           <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-sm">Cancel</button>
-                          <button 
-                            type="submit" 
-                            disabled={isSubmitting}
-                            className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition disabled:opacity-50"
-                          >
+                          <button type="submit" disabled={isSubmitting} className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition disabled:opacity-50">
                               {isSubmitting ? "Creating..." : "Create Album"}
                           </button>
                       </div>
                   </form>
               </div>
           </div>
+      )}
+
+      {/* === MODAL DELETE ALBUM === */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm bg-[#18181b] border border-zinc-800 rounded-xl p-6 text-center transform scale-100 transition-all shadow-2xl">
+                <div className="flex justify-center mb-4">
+                    <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="text-red-500 w-6 h-6" />
+                    </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-white mb-2">Delete Album?</h3>
+                <p className="text-zinc-400 mb-6 text-sm">
+                    Are you sure you want to delete <br/>
+                    <span className="text-white font-bold">"{deleteModal.title}"</span>?
+                    <br/>This action cannot be undone.
+                </p>
+                
+                <div className="flex gap-3 justify-center">
+                    <button 
+                        onClick={() => setDeleteModal({ isOpen: false, id: null, title: "" })}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 transition min-w-[100px]"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-900/20 min-w-[100px]"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );

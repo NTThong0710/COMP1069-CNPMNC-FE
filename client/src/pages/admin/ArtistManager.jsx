@@ -1,24 +1,30 @@
 import React, { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, Search, Loader2, X, Mic2, Link as LinkIcon, Calendar } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Loader2, X, Mic2, Link as LinkIcon, Calendar, AlertTriangle } from "lucide-react";
+import { useToast } from "../../context/ToastContext"; // 1. Import Toast
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 export default function ArtistManager() {
+  const { addToast } = useToast(); // 2. Hook Toast
+
   const [artists, setArtists] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Modal State
+  // Modal Create/Edit State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentId, setCurrentId] = useState(null);
   
+  // Modal Delete State (Mới)
+  const [deleteModal, setDeleteModal] = useState({ isOpen: false, id: null, name: "" });
+
   const [formData, setFormData] = useState({
       artist_id: "", // Jamendo ID
       name: "",
       bio: "",
       avatar: "",
-      image: "", // Có thể dùng chung hoặc tách riêng
+      image: "", 
       website: "",
       joindate: ""
   });
@@ -27,16 +33,12 @@ export default function ArtistManager() {
   const fetchArtists = async () => {
     setLoading(true);
     try {
-      // Gọi API lấy danh sách (Hiện tại API getAllArtists của bro trả về mix cả Jamendo)
-      // Để quản lý admin, tốt nhất nên có param ?source=local để chỉ lấy DB
-      // Nhưng tạm thời cứ gọi chung, ta sẽ filter ở client hoặc hiển thị hết
       const res = await fetch(`${BASE_API_URL}/artists?limit=50`);
       const data = await res.json();
-      
-      // API trả về: { success: true, data: [...] }
       setArtists(data.data || []);
     } catch (error) {
       console.error("Failed to fetch artists", error);
+      addToast("Lỗi tải danh sách nghệ sĩ", "error");
     } finally {
       setLoading(false);
     }
@@ -47,20 +49,44 @@ export default function ArtistManager() {
   }, []);
 
   // === 2. HANDLERS ===
-  const handleDelete = async (id) => {
-      if(!window.confirm("Are you sure you want to delete this artist?")) return;
+
+  // Mở Modal Xóa
+  const handleOpenDelete = (artist) => {
+      setDeleteModal({ 
+          isOpen: true, 
+          id: artist.id || artist._id, 
+          name: artist.name 
+      });
+  };
+
+  // Xác nhận Xóa (Gọi API)
+  const confirmDelete = async () => {
+      const id = deleteModal.id;
+      if (!id) return;
+
       try {
           const token = localStorage.getItem("accessToken");
-          await fetch(`${BASE_API_URL}/artists/${id}`, { 
-              method: 'DELETE', headers: { "Authorization": `Bearer ${token}` } 
+          const res = await fetch(`${BASE_API_URL}/artists/${id}`, { 
+              method: 'DELETE', 
+              headers: { "Authorization": `Bearer ${token}` } 
           });
-          fetchArtists();
-      } catch (e) { alert("Error deleting"); }
+          
+          if (res.ok) {
+              addToast("Đã xóa nghệ sĩ thành công", "success");
+              fetchArtists();
+          } else {
+              addToast("Xóa nghệ sĩ thất bại", "error");
+          }
+      } catch (e) { 
+          addToast("Lỗi kết nối server", "error"); 
+      } finally {
+          setDeleteModal({ isOpen: false, id: null, name: "" });
+      }
   };
 
   const handleEdit = (artist) => {
       setIsEditing(true);
-      setCurrentId(artist.id || artist._id); // Lưu ý ID
+      setCurrentId(artist.id || artist._id);
       setFormData({
           artist_id: artist.artist_id || "",
           name: artist.name || "",
@@ -75,14 +101,14 @@ export default function ArtistManager() {
 
   const handleCreateOrUpdate = async (e) => {
       e.preventDefault();
-      const token = localStorage.getItem("accessToken");
-      const url = isEditing 
-          ? `${BASE_API_URL}/artists/${currentId}`
-          : `${BASE_API_URL}/artists`;
-      
-      const method = isEditing ? "PUT" : "POST";
-
       try {
+          const token = localStorage.getItem("accessToken");
+          const url = isEditing 
+              ? `${BASE_API_URL}/artists/${currentId}`
+              : `${BASE_API_URL}/artists`;
+          
+          const method = isEditing ? "PUT" : "POST";
+
           const res = await fetch(url, {
               method,
               headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
@@ -90,7 +116,7 @@ export default function ArtistManager() {
           });
 
           if(res.ok) {
-              alert(isEditing ? "Artist updated!" : "Artist created!");
+              addToast(isEditing ? "Cập nhật nghệ sĩ thành công!" : "Tạo nghệ sĩ thành công!", "success");
               setIsModalOpen(false);
               fetchArtists();
               // Reset form
@@ -98,9 +124,12 @@ export default function ArtistManager() {
               setIsEditing(false);
           } else {
               const err = await res.json();
-              alert("Failed: " + (err.message || "Unknown error"));
+              addToast("Thất bại: " + (err.message || "Lỗi không xác định"), "error");
           }
-      } catch (e) { console.error(e); }
+      } catch (e) { 
+          console.error(e);
+          addToast("Lỗi kết nối server", "error");
+      }
   };
 
   // Client-side filter
@@ -118,6 +147,7 @@ export default function ArtistManager() {
         </div>
         <button 
             onClick={() => { setIsEditing(false); setFormData({ artist_id: "", name: "", bio: "", avatar: "", image: "", website: "", joindate: "" }); setIsModalOpen(true); }}
+            aria-label="Add new artist"
             className="bg-white text-black hover:bg-zinc-200 font-medium px-4 py-2 rounded-md flex items-center gap-2 transition shadow-lg"
         >
             <Plus size={18} /> Add New Artist
@@ -167,7 +197,7 @@ export default function ArtistManager() {
                                         />
                                         <div className="flex flex-col">
                                             <span className="text-white font-medium truncate max-w-[180px]">{artist.name}</span>
-                                            {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" className="text-xs text-blue-400 hover:underline flex items-center gap-1"><LinkIcon size={10}/> Website</a>}
+                                            {artist.website && <a href={artist.website} target="_blank" rel="noreferrer" aria-label={`Visit website for ${artist.name}`} className="text-xs text-blue-400 hover:underline flex items-center gap-1"><LinkIcon size={10}/> Website</a>}
                                         </div>
                                     </div>
                                 </td>
@@ -187,8 +217,16 @@ export default function ArtistManager() {
                                 
                                 <td className="px-6 py-4 text-right">
                                     <div className="flex items-center justify-end gap-2">
-                                        <button onClick={() => handleEdit(artist)} className="p-2 hover:bg-zinc-800 rounded-md text-blue-400 transition"><Pencil size={16}/></button>
-                                        <button onClick={() => handleDelete(artist.id || artist._id)} className="p-2 hover:bg-zinc-800 rounded-md text-red-400 transition"><Trash2 size={16}/></button>
+                                        <button onClick={() => handleEdit(artist)} aria-label="Edit artist" className="p-2 hover:bg-zinc-800 rounded-md text-blue-400 transition"><Pencil size={16}/></button>
+                                        
+                                        {/* Nút Delete gọi hàm mở Modal */}
+                                        <button 
+                                            onClick={() => handleOpenDelete(artist)} 
+                                            aria-label="Delete artist" 
+                                            className="p-2 hover:bg-zinc-800 rounded-md text-red-400 transition"
+                                        >
+                                            <Trash2 size={16}/>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -205,7 +243,7 @@ export default function ArtistManager() {
       {isModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="bg-zinc-950 border border-zinc-800 w-full max-w-lg rounded-xl p-6 relative shadow-2xl overflow-y-auto max-h-[90vh]">
-                  <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-zinc-400 hover:text-white"><X/></button>
+                  <button onClick={() => setIsModalOpen(false)} aria-label="Close modal" className="absolute top-4 right-4 text-zinc-400 hover:text-white"><X/></button>
                   
                   <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
                       <Mic2 size={24} className="text-green-500"/> {isEditing ? "Edit Artist" : "Add New Artist"}
@@ -251,14 +289,49 @@ export default function ArtistManager() {
                       </div>
 
                       <div className="flex justify-end gap-3 pt-4">
-                          <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-sm">Cancel</button>
-                          <button type="submit" className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition">
+                          <button type="button" onClick={() => setIsModalOpen(false)} aria-label="Cancel" className="px-4 py-2 rounded-md text-zinc-300 hover:text-white hover:bg-zinc-800 font-bold text-sm">Cancel</button>
+                          <button type="submit" aria-label={isEditing ? "Update artist" : "Create artist"} className="bg-white text-black font-bold px-6 py-2 rounded-full hover:scale-105 transition">
                               {isEditing ? "Update Artist" : "Create Artist"}
                           </button>
                       </div>
                   </form>
               </div>
           </div>
+      )}
+
+      {/* === MODAL DELETE (MỚI THÊM) === */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm bg-[#18181b] border border-zinc-800 rounded-xl p-6 text-center transform scale-100 transition-all shadow-2xl">
+                <div className="flex justify-center mb-4">
+                    <div className="w-12 h-12 bg-red-900/30 rounded-full flex items-center justify-center">
+                        <AlertTriangle className="text-red-500 w-6 h-6" />
+                    </div>
+                </div>
+                
+                <h3 className="text-xl font-bold text-white mb-2">Delete Artist?</h3>
+                <p className="text-zinc-400 mb-6 text-sm">
+                    Are you sure you want to delete <br/>
+                    <span className="text-white font-bold">"{deleteModal.name}"</span>?
+                    <br/>This action cannot be undone.
+                </p>
+                
+                <div className="flex gap-3 justify-center">
+                    <button 
+                        onClick={() => setDeleteModal({ isOpen: false, id: null, name: "" })}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm border border-zinc-700 hover:border-zinc-500 hover:bg-zinc-800 transition min-w-[100px]"
+                    >
+                        Cancel
+                    </button>
+                    <button 
+                        onClick={confirmDelete}
+                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm bg-red-600 hover:bg-red-500 transition shadow-lg shadow-red-900/20 min-w-[100px]"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
       )}
     </div>
   );

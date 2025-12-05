@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Play, Shuffle, Download } from "lucide-react";
 import { FaRegClock, FaPlay } from "react-icons/fa";
-import { useAuth } from "../../context/AuthContext"; 
+import { useAuth } from "../../context/AuthContext";
+// Import component này để dùng menu chuột phải
+import SongTooltip from "../../components/SongTooltip"; 
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -21,6 +23,14 @@ export default function LikedSongs({ onSongSelect }) {
   const { user, likedSongsTrigger } = useAuth();
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // --- STATE CONTEXT MENU ---
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    song: null,
+  });
 
   useEffect(() => {
     const fetchLikedSongs = async () => {
@@ -45,19 +55,11 @@ export default function LikedSongs({ onSongSelect }) {
                 const data = await res.json();
                 const rawSongs = data.likeSongs || [];
 
-                // === MAP DỮ LIỆU (FIX LỖI ARTIST IMAGE) ===
                 const mappedSongs = rawSongs.map(song => {
                     const artistObj = typeof song.artist === 'object' ? song.artist : null;
-                    
-                    // 1. Lấy tên Artist
                     const artistName = artistObj ? artistObj.name : "Unknown Artist";
-                    
-                    // 2. ✅ QUAN TRỌNG: Ưu tiên lấy 'artist_id' (Jamendo ID)
-                    // Backend đã populate: { name, artist_id, avatar }
-                    // Nếu không có artist_id thì mới lấy _id
                     const artistId = artistObj ? (artistObj.artist_id || artistObj._id) : null;
                     
-                    // Xử lý Album
                     let albumDisplay = "Single";
                     if (typeof song.album === 'object' && song.album?.title) {
                         albumDisplay = song.album.title;
@@ -70,7 +72,6 @@ export default function LikedSongs({ onSongSelect }) {
                         title: song.title,
                         artist: artistName,
                         artistId: artistId,
-                        
                         image: song.cover || "https://placehold.co/50x50/282828/white?text=Music",
                         date: formatDate(song.createdAt),
                         duration: formatDuration(song.duration),
@@ -89,12 +90,27 @@ export default function LikedSongs({ onSongSelect }) {
     };
 
     fetchLikedSongs();
-  }, [user, likedSongsTrigger]);
+  }, [user, likedSongsTrigger]); // Khi user like/unlike ở chỗ khác, list này sẽ tự reload nhờ trigger
+
+  // --- XỬ LÝ CLICK CHUỘT PHẢI ---
+  const handleContextMenu = (e, song) => {
+    e.preventDefault();
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      song: song,
+    });
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu({ ...contextMenu, visible: false });
+  };
 
   if (!user) return null;
 
   return (
-    <div className="min-h-screen text-white pb-24">
+    <div className="min-h-screen text-white" onClick={closeContextMenu}>
       {/* Header */}
       <section className="bg-gradient-to-b from-[#4c1d95] via-[#4c1d95] to-[#2e1065] p-8 flex items-end gap-6">
           <div className="w-52 h-52 bg-gradient-to-br from-indigo-500 via-purple-600 to-green-200 flex items-center justify-center rounded shadow-lg">
@@ -131,8 +147,8 @@ export default function LikedSongs({ onSongSelect }) {
         <div className="grid grid-cols-[40px_6fr_4fr_3fr_80px] px-4 py-2 border-b border-neutral-800 text-sm text-gray-400 uppercase tracking-wider mb-4">
           <div className="text-center">#</div>
           <div>Title</div>
-          <div>Album / Genre</div>
-          <div>Date added</div>
+          <div className="hidden md:block">Album / Genre</div>
+          <div className="hidden md:block">Date added</div>
           <div className="flex justify-end"><FaRegClock /></div>
         </div>
 
@@ -145,23 +161,25 @@ export default function LikedSongs({ onSongSelect }) {
                 <div
                   key={song.id}
                   onClick={() => onSongSelect(song, songs, index)}
-                  className="grid grid-cols-[40px_6fr_4fr_3fr_80px] items-center px-4 py-2 hover:bg-white/10 rounded-md group cursor-pointer transition-colors"
+                  // --- KÍCH HOẠT MENU CHUỘT PHẢI ---
+                  onContextMenu={(e) => handleContextMenu(e, song)}
+                  className="grid grid-cols-[40px_6fr_auto_auto_80px] md:grid-cols-[40px_6fr_4fr_3fr_80px] items-center px-4 py-2 hover:bg-white/10 rounded-md group cursor-pointer transition-colors"
                 >
-                  <div className="text-neutral-400 text-center flex justify-center">
-                     <span className="group-hover:hidden font-medium text-base">{index + 1}</span>
-                     <FaPlay size={12} className="hidden group-hover:block text-white mt-1" />
+                  <div className="text-neutral-400 text-center flex justify-center w-10">
+                      <span className="group-hover:hidden font-medium text-base">{index + 1}</span>
+                      <FaPlay size={12} className="hidden group-hover:block text-white mt-1" />
                   </div>
 
                   <div className="flex items-center gap-4 overflow-hidden">
-                    <img src={song.image} alt={song.title} className="w-10 h-10 rounded object-cover" />
-                    <div className="flex flex-col overflow-hidden">
+                    <img src={song.image} alt={song.title} className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                    <div className="flex flex-col overflow-hidden min-w-0">
                       <span className="font-medium text-white truncate pr-2">{song.title}</span>
                       <span className="text-sm text-neutral-400 truncate group-hover:text-white transition-colors">{song.artist}</span>
                     </div>
                   </div>
 
-                  <div className="text-neutral-400 truncate pr-4">{song.album}</div>
-                  <div className="text-neutral-400 text-sm truncate">{song.date}</div>
+                  <div className="hidden md:block text-neutral-400 truncate pr-4">{song.album}</div>
+                  <div className="hidden md:block text-neutral-400 text-sm truncate">{song.date}</div>
                   <div className="text-neutral-400 text-sm text-right">{song.duration}</div>
                 </div>
               ))
@@ -172,6 +190,16 @@ export default function LikedSongs({ onSongSelect }) {
           )}
         </div>
       </section>
+
+      {/* --- HIỂN THỊ SONG TOOLTIP KHI CLICK CHUỘT PHẢI --- */}
+      {contextMenu.visible && contextMenu.song && (
+        <SongTooltip
+          song={contextMenu.song}
+          position={{ x: contextMenu.x, y: contextMenu.y }}
+          onClose={closeContextMenu}
+          onPlaySong={() => onSongSelect(contextMenu.song, songs, songs.findIndex(t => t.id === contextMenu.song.id))}
+        />
+      )}
     </div>
   );
 }

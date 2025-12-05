@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom'; // ✅ 1. Import Link
 export default function ArtistCard({ id, image, name, type }) {
   return (
     // ✅ 3. Bọc toàn bộ component trong thẻ Link
-    <Link to={`/artist/${id}`}>
+    <Link to={`/artist/${id}`} aria-label={`Go to artist ${name}`}>
       <div className="group relative bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition-all duration-300 cursor-pointer flex flex-col items-center text-center shadow-lg">
         
         <div className="relative mb-4">
@@ -16,6 +16,7 @@ export default function ArtistCard({ id, image, name, type }) {
           />
           
           <button 
+            aria-label={`Play artist ${name}`}
             className="
               absolute bottom-2 right-2 bg-green-500 p-4 rounded-full shadow-xl flex 
               items-center justify-center opacity-0 translate-y-2 group-hover:opacity-100 

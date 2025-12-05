@@ -122,7 +122,7 @@ export default function HistoryPage({ onSongSelect }) {
   if (loading) return <div className="min-h-screen p-8 text-white text-lg animate-pulse">Đang tải lịch sử...</div>;
 
   return (
-    <div className="min-h-screen text-white pb-24">
+    <div className="min-h-screen text-white">
       {/* Header Section */}
       <section className="bg-gradient-to-b from-emerald-800 via-emerald-900 to-[#121212] p-8 flex items-end gap-6">
         <div className="w-52 h-52 bg-emerald-600 flex items-center justify-center rounded shadow-lg">
@@ -140,6 +140,7 @@ export default function HistoryPage({ onSongSelect }) {
               {historyList.length > 0 && (
                   <button 
                     onClick={handleClearHistory}
+                    aria-label="Clear history"
                     className="text-sm font-bold text-neutral-400 hover:text-red-500 flex items-center gap-2 border border-neutral-600 px-4 py-2 rounded-full hover:border-red-500 transition"
                   >
                       <FaTrash size={14} /> Clear History

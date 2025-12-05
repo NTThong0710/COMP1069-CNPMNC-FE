@@ -72,6 +72,7 @@ const Register3 = () => {
                 {/* Register Button */}
                 <Link to='/complete'>
                     <button
+                        aria-label="Complete registration and sign up"
                         className="w-full bg-green-500 text-black font-bold py-3 rounded-full hover:bg-green-400 transition duration-300 mt-4"
                     >
                         Đăng ký

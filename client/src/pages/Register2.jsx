@@ -75,6 +75,7 @@ const Register2 = () => {
                             </label>
                             <button
                                 type="button"
+                                aria-label="Learn why we need your birthday"
                                 className="text-neutral-400 hover:text-white text-xs underline"
                             >
                                 Tại sao chúng tôi cần biết ngày sinh của bạn? Tìm hiểu thêm.
@@ -160,6 +161,7 @@ const Register2 = () => {
                                     key={option}
                                     type="button"
                                     onClick={() => handleGenderSelect(option.toLowerCase())}
+                                    aria-label={`Select gender ${option}`}
                                     className={`w-full text-left px-4 py-3 rounded border transition duration-300 ${gender === option.toLowerCase()
                                         ? "border-green-500 bg-green-500 bg-opacity-10 text-white"
                                         : "border-neutral-700 bg-neutral-800 text-white hover:border-neutral-500"
@@ -172,6 +174,7 @@ const Register2 = () => {
                             <button
                                 type="button"
                                 onClick={() => handleGenderSelect("other")}
+                                aria-label="Select other gender"
                                 className={`w-full text-left px-4 py-3 rounded border transition duration-300 ${gender === "other"
                                     ? "border-green-500 bg-green-500 bg-opacity-10 text-white"
                                     : "border-neutral-700 bg-neutral-800 text-white hover:border-neutral-500"
@@ -201,6 +204,7 @@ const Register2 = () => {
                     <Link to='/register3'>
                         <button
                             type="submit"
+                            aria-label="Go to next register step"
                             className="w-full bg-green-500 text-black font-bold py-3 rounded-full hover:bg-green-400 transition duration-300"
                         >
                             Tiếp theo

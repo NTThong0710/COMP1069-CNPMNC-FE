@@ -2,20 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { User, Edit2, LogOut, MoreHorizontal, Disc } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext'; // 1. Import Toast
 import EditProfileModal from '../../components/EditProfileModal';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 export default function ProfilePage() {
-    // Lấy hàm updateUser từ Context
     const { user, logout, updateUser } = useAuth();
+    const { addToast } = useToast(); // 2. Khai báo hook
     const navigate = useNavigate();
     
     const [profileData, setProfileData] = useState(null);
     const [loading, setLoading] = useState(true);
+    
+    // State Modal
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-    // === 1. FETCH PROFILE DATA ===
+    // === 1. FETCH PROFILE ===
     const fetchProfile = async () => {
         setLoading(true);
         try {
@@ -29,11 +33,7 @@ export default function ProfilePage() {
             if (res.ok) {
                 const data = await res.json();
                 setProfileData(data);
-                
-                // ✅ FIX LỖI HEADER KHÔNG HIỆN AVATAR:
-                // Cập nhật data mới nhất (có avatar) vào Context để Header hiển thị theo
                 updateUser(data); 
-                
             } else {
                 setProfileData(user);
             }
@@ -46,11 +46,10 @@ export default function ProfilePage() {
     };
 
     useEffect(() => {
-        // Gọi API mỗi khi vào trang Profile để đảm bảo data tươi mới
         if (user) fetchProfile();
-    }, []); // Chạy 1 lần khi mount (hoặc khi user đổi nếu cần: [user._id])
+    }, []); 
 
-    // === 2. XỬ LÝ UPDATE PROFILE ===
+    // === 2. UPDATE PROFILE ===
     const handleSaveProfile = async (newName, newAvatarUrl) => {
         try {
             const token = localStorage.getItem('accessToken');
@@ -67,24 +66,28 @@ export default function ProfilePage() {
             });
 
             if (res.ok) {
-                // Refresh lại dữ liệu
                 await fetchProfile(); 
-                alert("Cập nhật hồ sơ thành công!");
+                addToast("Cập nhật hồ sơ thành công!", "success"); // Toast xanh
             } else {
-                alert("Lỗi cập nhật hồ sơ");
+                addToast("Cập nhật hồ sơ thất bại", "error"); // Toast đỏ
             }
         } catch (error) {
             console.error("Save profile error", error);
+            addToast("Lỗi kết nối server", "error");
         }
     };
 
-    // === 3. XỬ LÝ LOGOUT ===
-    const handleLogout = () => {
-        const confirm = window.confirm("Bạn có chắc muốn đăng xuất?");
-        if (confirm) {
-            logout();
-            navigate('/login');
-        }
+    // === 3. LOGOUT ===
+    const handleLogoutClick = () => {
+        setIsLogoutModalOpen(true);
+    };
+
+    const confirmLogout = () => {
+        logout();
+        setIsLogoutModalOpen(false);
+        navigate('/login');
+        // Toast chào tạm biệt
+        setTimeout(() => addToast("Đăng xuất thành công", "success"), 100);
     };
 
     if (!user) {
@@ -100,29 +103,25 @@ export default function ProfilePage() {
         );
     }
 
-    // Dữ liệu hiển thị
     const displayUser = profileData || user;
     const username = displayUser.username || displayUser.name || "User";
     const publicPlaylists = displayUser.playlists || []; 
     const playlistCount = publicPlaylists.length;
 
     return (
-        <main className="pb-24 min-h-screen bg-neutral-900">
+        <main className="pb-24 min-h-screen bg-neutral-900 relative">
             
-            {/* === HEADER PROFILE === */}
+            {/* Header Profile */}
             <div className="bg-gradient-to-b from-[#535353] to-[#121212] p-8 pb-6 flex flex-col md:flex-row items-center md:items-end gap-6">
-                {/* Avatar */}
                 <div 
                     onClick={() => setIsEditModalOpen(true)}
                     className="w-48 h-48 shadow-2xl rounded-full overflow-hidden bg-[#282828] flex items-center justify-center group relative cursor-pointer"
                 >
-                    {/* Ưu tiên hiển thị ảnh từ displayUser */}
                     {displayUser.avatar ? (
                         <img src={displayUser.avatar} alt={username} className="w-full h-full object-cover" />
                     ) : (
                         <User size={64} className="text-neutral-400" />
                     )}
-                    
                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="text-white flex flex-col items-center gap-1">
                             <Edit2 size={32} />
@@ -145,7 +144,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* === ACTION BAR === */}
+            {/* Action Bar */}
             <div className="px-8 py-4 bg-[#121212]/50 flex items-center gap-4 border-b border-neutral-800">
                  <button 
                     onClick={() => setIsEditModalOpen(true)}
@@ -153,39 +152,45 @@ export default function ProfilePage() {
                  >
                     Edit Profile
                  </button>
-                 
                  <button className="text-neutral-400 hover:text-white">
                     <MoreHorizontal size={32} />
                  </button>
-
                  <div className="flex-1"></div>
-
                  <button 
-                    onClick={handleLogout}
+                    onClick={handleLogoutClick}
                     className="flex items-center gap-2 text-neutral-400 hover:text-red-500 font-bold text-sm transition px-4 py-2 rounded-md hover:bg-neutral-800"
                  >
                     <LogOut size={18} /> Log out
                  </button>
             </div>
 
-            {/* === PLAYLISTS === */}
+            {/* Playlists */}
             <div className="p-8">
                 <h2 className="text-2xl font-bold text-white mb-4">Public Playlists</h2>
                 {publicPlaylists.length > 0 ? (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
                         {publicPlaylists.map((pl, index) => (
-                             <div key={index} className="bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition cursor-pointer group">
+                             <div 
+                                key={pl._id || index}
+                                onClick={() => navigate(`/playlist/${pl._id}`)} 
+                                className="bg-[#181818] p-4 rounded-lg hover:bg-[#282828] transition cursor-pointer group"
+                             >
                                 <div className="relative mb-4 shadow-lg">
                                     <div className="w-full aspect-square bg-neutral-800 rounded-md flex items-center justify-center overflow-hidden">
                                         <img 
-                                            src={pl.cover || `https://placehold.co/300x300/282828/white?text=${pl.name?.charAt(0) || 'P'}`} 
+                                            src={pl.cover || pl.image || `https://placehold.co/300x300/282828/white?text=${(pl.name || 'P').charAt(0)}`} 
                                             alt={pl.name} 
-                                            className="w-full h-full object-cover" 
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
                                         />
+                                    </div>
+                                    <div className="absolute right-2 bottom-2 bg-green-500 rounded-full p-3 shadow-lg opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-black">
+                                            <path fillRule="evenodd" d="M4.5 5.653c0-1.426 1.529-2.33 2.779-1.643l11.54 6.348c1.295.712 1.295 2.573 0 3.285L7.28 19.991c-1.25.687-2.779-.217-2.779-1.643V5.653z" clipRule="evenodd" />
+                                        </svg>
                                     </div>
                                 </div>
                                 <h3 className="font-bold text-white truncate">{pl.name || `Playlist #${index + 1}`}</h3>
-                                <p className="text-sm text-neutral-400 mt-1">By {username}</p>
+                                <p className="text-sm text-neutral-400 mt-1 truncate">By {username}</p>
                              </div>
                         ))}
                     </div>
@@ -197,13 +202,45 @@ export default function ProfilePage() {
                 )}
             </div>
 
-            {/* === MODAL === */}
+            {/* Modal Edit */}
             <EditProfileModal 
                 isOpen={isEditModalOpen}
                 onClose={() => setIsEditModalOpen(false)}
                 currentUser={displayUser}
                 onSave={handleSaveProfile}
             />
+
+            {/* Modal Logout */}
+            {isLogoutModalOpen && (
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+                    onClick={() => setIsLogoutModalOpen(false)}
+                >
+                    <div 
+                        className="w-full max-w-sm bg-[#282828] rounded-xl shadow-2xl border border-white/5 p-6 text-center transform scale-100 transition-all"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <h3 className="text-xl font-bold text-white mb-2">Đăng xuất?</h3>
+                        <p className="text-neutral-400 mb-8 text-sm">
+                            Bạn có chắc chắn muốn đăng xuất khỏi tài khoản <span className="text-white font-bold">{username}</span> không?
+                        </p>
+                        <div className="flex gap-4 justify-center">
+                            <button 
+                                onClick={() => setIsLogoutModalOpen(false)}
+                                className="px-6 py-2.5 rounded-full font-bold text-white text-sm border border-neutral-600 hover:border-white hover:scale-105 transition"
+                            >
+                                Huỷ
+                            </button>
+                            <button 
+                                onClick={confirmLogout}
+                                className="px-6 py-2.5 rounded-full font-bold text-black text-sm bg-green-500 hover:bg-green-400 hover:scale-105 transition shadow-lg shadow-green-500/20"
+                            >
+                                Đăng xuất
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

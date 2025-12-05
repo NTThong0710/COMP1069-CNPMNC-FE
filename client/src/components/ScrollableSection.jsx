@@ -59,6 +59,7 @@ export default function ScrollableSection({ title, children }) {
             <button
               onClick={() => handleNavClick('left')}
               disabled={!canScrollLeft}
+              aria-label="Scroll left"
               className="bg-neutral-800/70 p-1 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
             >
               <ChevronLeftIcon className="h-5 w-5 text-white" />
@@ -66,6 +67,7 @@ export default function ScrollableSection({ title, children }) {
             <button
               onClick={() => handleNavClick('right')}
               disabled={!canScrollRight}
+              aria-label="Scroll right"
               className="bg-neutral-800/70 p-1 rounded-full disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
             >
               <ChevronRightIcon className="h-5 w-5 text-white" />
