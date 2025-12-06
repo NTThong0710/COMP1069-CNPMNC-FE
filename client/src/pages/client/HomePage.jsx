@@ -10,70 +10,8 @@ import LoginPromptModal from "../../components/LoginPromptModal";
 import ScrollableSection from "../../components/ScrollableSection";
 import { useAuth } from "../../context/AuthContext";
 
+import LandingPage from './LandingPage';
 const BASE_API_URL = import.meta.env.VITE_API_URL;
-
-// --- Component Landing Page (Giữ nguyên) ---
-const LandingPage = () => {
-  return (
-    <div className="text-white min-h-full">
-      <section className="flex flex-col items-center justify-center text-center py-12 px-4 md:py-16 lg:py-20 bg-gradient-to-r from-purple-800 to-blue-500 min-h-[60vh] md:h-[80vh]">
-        <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight">
-          Listening is everything
-        </h1>
-        <p className="text-base md:text-lg lg:text-xl mb-8 max-w-lg mx-auto">
-          Millions of songs and podcasts. No credit card needed.
-        </p>
-        <Link to="/register">
-          <button className="bg-green-500 text-black font-bold text-sm md:text-base lg:text-lg px-6 py-3 md:px-8 rounded-full hover:scale-105 transition-transform">
-            CREATE ACCOUNT FREE
-          </button>
-        </Link>
-      </section>
-
-      <section className="py-12 px-4 md:px-8 mb-2">
-        <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-center mb-8 md:mb-12">
-          Why Our Website?
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-8 lg:gap-12 max-w-6xl mx-auto">
-          <div className="text-center">
-            <div className="flex justify-center">
-              <FaMusic className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 mb-4 text-green-500" />
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2">
-              Play your favorites.
-            </h3>
-            <p className="text-sm md:text-base text-neutral-400">
-              Listen to the songs you love, and discover new music and podcasts.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="flex justify-center">
-              <BsMusicNoteList className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 mb-4 text-green-500" />
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2">
-              Playlists made easy.
-            </h3>
-            <p className="text-sm md:text-base text-neutral-400">
-              We'll help you make playlists. Or enjoy playlists made by music
-              experts.
-            </p>
-          </div>
-          <div className="text-center">
-            <div className="flex justify-center">
-              <FaPodcast className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 mb-4 text-green-500" />
-            </div>
-            <h3 className="text-xl md:text-2xl font-bold mb-2">
-              Make it yours.
-            </h3>
-            <p className="text-sm md:text-base text-neutral-400">
-              Tell us what you like, and we'll recommend music for you.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-};
 
 const formatDuration = (seconds) => {
   if (!seconds) return "0:00";
@@ -313,8 +251,8 @@ export default function HomePage({ onSongSelect }) {
         {topSongs.length > 0
           ? topSongs.map((song, index) => renderSongItem(song, topSongs, index))
           : !loading && (
-              <p className="text-neutral-400">Chưa có bảng xếp hạng.</p>
-            )}
+            <p className="text-neutral-400">Chưa có bảng xếp hạng.</p>
+          )}
       </ScrollableSection>
 
       {/* 2. NGHE NHIỀU NHẤT */}
@@ -334,11 +272,11 @@ export default function HomePage({ onSongSelect }) {
       <ScrollableSection title="Mới phát hành">
         {newReleases.length > 0
           ? newReleases.map((song, index) =>
-              renderSongItem(song, newReleases, index)
-            )
+            renderSongItem(song, newReleases, index)
+          )
           : !loading && (
-              <p className="text-neutral-400">Chưa có bài hát mới.</p>
-            )}
+            <p className="text-neutral-400">Chưa có bài hát mới.</p>
+          )}
       </ScrollableSection>
 
       {/* 4. NGHỆ SĨ (Giữ nguyên, không có nút add playlist) */}
