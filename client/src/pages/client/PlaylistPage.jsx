@@ -253,11 +253,12 @@ export default function PlaylistPage({ onSongSelect }) {
         Error: {error}
       </main>
     );
-
+  const firstSongImage = tracks.length > 0 ? tracks[0].image : null;
   const coverImage =
     playlist.imageUrl ||
     playlist.cover ||
     playlist.image ||
+    firstSongImage ||
     "bg-gradient-to-br from-indigo-500 to-purple-700";
 
   return (
@@ -418,6 +419,13 @@ export default function PlaylistPage({ onSongSelect }) {
                       src={editFormData.cover}
                       alt="Preview"
                       className="w-full h-full object-cover"
+                    />
+                  ) : tracks.length > 0 ? (
+                    // Nếu form trống nhưng playlist có bài hát -> Hiện ảnh bài đầu tiên
+                    <img
+                      src={tracks[0].image}
+                      alt="Preview from Song"
+                      className="w-full h-full object-cover opacity-70"
                     />
                   ) : (
                     <Music size={50} className="text-[#b3b3b3]" />
