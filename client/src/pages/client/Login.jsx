@@ -9,8 +9,10 @@ const Step1_EnterEmail = ({ onNext }) => {
 
   // --- HÀM XỬ LÝ GOOGLE LOGIN ---
   const handleGoogleLogin = () => {
-    window.open("http://localhost:5000/api/auth/google", "_self");
-  };
+  const apiBase = import.meta.env.VITE_API_URL;
+  window.open(`${apiBase}/api/auth/google`, "_self");
+};
+
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onNext(email); }}>
