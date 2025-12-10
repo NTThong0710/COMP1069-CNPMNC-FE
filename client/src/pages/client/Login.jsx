@@ -10,7 +10,7 @@ const Step1_EnterEmail = ({ onNext }) => {
   // --- HÀM XỬ LÝ GOOGLE LOGIN ---
   const handleGoogleLogin = () => {
   const apiBase = import.meta.env.VITE_API_URL;
-  window.open(`${apiBase}/api/auth/google`, "_self");
+  window.open(`${apiBase}/auth/google`, "_self");
 };
 
 
