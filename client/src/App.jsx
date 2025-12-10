@@ -221,8 +221,8 @@ function AppLayout() {
       {/* ✅ BỌC HEADER ĐỂ LÀM HIỆU ỨNG TRƯỢT ẨN/HIỆN */}
       <div
         className={`transition-all duration-500 ease-in-out z-40 overflow-hidden ${showMainHeader
-            ? 'max-h-20 opacity-100 translate-y-0'
-            : 'max-h-0 opacity-0 -translate-y-full'
+          ? 'max-h-20 opacity-100 translate-y-0 overflow-visible' // 👈 SỬA: Khi hiện thì cho phép tràn (để hiện menu)
+          : 'max-h-0 opacity-0 -translate-y-full overflow-hidden'
           }`}
       >
         <div className="hidden md:block">
