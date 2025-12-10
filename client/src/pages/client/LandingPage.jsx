@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useOutletContext } from 'react-router-dom';
 import { BsMusicNoteList } from 'react-icons/bs';
 import { GoHome } from "react-icons/go";
 import { FaMusic, FaPodcast, FaCheck, FaHeart, FaFacebookF, FaTwitter, FaInstagram, FaYoutube, FaApple, FaGooglePlay } from 'react-icons/fa';
@@ -8,19 +8,42 @@ const LandingPage = () => {
     const [isSticky, setIsSticky] = useState(false);
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+    // Lấy hàm điều khiển header từ App.js
+    const { setShowMainHeader } = useOutletContext() || {};
+
     useEffect(() => {
+        // 1. Mới vào trang -> Luôn hiện Header chính
+        if (setShowMainHeader) setShowMainHeader(true);
+
         const scrollContainer = document.querySelector('.main-content-scroll');
         const target = scrollContainer || window;
 
         const handleScroll = () => {
             const currentScroll = scrollContainer ? scrollContainer.scrollTop : window.scrollY;
             const threshold = window.innerHeight * 0.9;
-            setIsSticky(currentScroll > threshold);
+
+            // 2. Tính toán trạng thái
+            const shouldShowSticky = currentScroll > threshold;
+
+            // 3. Cập nhật Sticky Header (Màu tím)
+            setIsSticky(shouldShowSticky);
+
+            // 4. Cập nhật Main Header (Màu đen)
+            // Nếu Sticky hiện -> Ẩn Main Header (false)
+            // Nếu Sticky ẩn -> Hiện Main Header (true)
+            if (setShowMainHeader) {
+                setShowMainHeader(!shouldShowSticky);
+            }
         };
 
         target.addEventListener('scroll', handleScroll);
-        return () => target.removeEventListener('scroll', handleScroll);
-    }, []);
+
+        // 5. Cleanup: Khi rời trang, trả lại Header chính cho các trang khác
+        return () => {
+            target.removeEventListener('scroll', handleScroll);
+            if (setShowMainHeader) setShowMainHeader(true);
+        };
+    }, [setShowMainHeader]);
 
     const handleMouseMove = (e) => {
         const x = (e.clientX / window.innerWidth - 0.5) * 2;
@@ -37,10 +60,10 @@ const LandingPage = () => {
             >
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-white/40 rounded-full flex items-center justify-center backdrop-blur-sm shadow-sm flex-shrink-0">💎</div>
-                    <span className="font-bold text-sm md:text-lg text-black truncate">Live the music with NHOM 8</span>
+                    <span className="font-bold text-sm md:text-lg text-black truncate">NGHE NHẠC CÙNG CHÚNG TÔI </span>
                 </div>
                 <Link to="/register">
-                    <button className="bg-black text-white hover:bg-neutral-800 font-bold text-xs md:text-sm px-6 py-3 rounded-full transition-colors shadow-lg whitespace-nowrap ml-4">Try for free</button>
+                    <button className="bg-black text-white hover:bg-neutral-800 font-bold text-xs md:text-sm px-6 py-3 rounded-full transition-colors shadow-lg whitespace-nowrap ml-4">HÃY THỬ NHÉ!!!</button>
                 </Link>
             </div>
 
@@ -49,51 +72,31 @@ const LandingPage = () => {
                 className="flex flex-col items-center justify-center text-center px-4 bg-gradient-to-r from-purple-800 to-blue-600 h-screen relative z-10"
                 style={{ borderBottomLeftRadius: '50% 50px', borderBottomRightRadius: '50% 50px' }}
             >
-                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight max-w-5xl drop-shadow-lg">LET MUSIC HEAL YOUR HEART</h1>
-                <p className="text-lg md:text-2xl mb-12 max-w-2xl mx-auto opacity-90 font-medium">Millions of songs and podcasts. No credit card needed.</p>
+                <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-8 leading-tight max-w-5xl drop-shadow-lg">HÃY ĐỂ ÂM NHẠC CHẠM ĐẾN TRÁI TIM CỦA BẠN</h1>
+                <p className="text-lg md:text-2xl mb-12 max-w-2xl mx-auto opacity-90 font-medium">Chúng tôi có hàng triệu bài hát cho bạn.</p>
                 <Link to="/register">
-                    <button className="bg-[#1ED760] text-black font-extrabold text-base md:text-xl px-10 py-5 rounded-full hover:scale-105 transition-transform tracking-widest shadow-xl hover:shadow-green-500/20">CREATE ACCOUNT FREE</button>
+                    <button className="bg-[#1ED760] text-black font-extrabold text-base md:text-xl px-10 py-5 rounded-full hover:scale-105 transition-transform tracking-widest shadow-xl hover:shadow-green-500/20">Miễn phí không tốn tiền</button>
                 </Link>
-            </section>
-
-            {/* === 2. PRICING SECTION === */}
-            <section className="py-24 px-4 bg-black text-center min-h-screen flex flex-col justify-center">
-                <h2 className="text-4xl md:text-6xl font-black mb-16 leading-tight">Choose the offer<br className="hidden md:block" /> that works for you</h2>
-                <div className="bg-white text-black max-w-sm mx-auto rounded-3xl p-8 relative overflow-hidden shadow-2xl hover:scale-105 transition-transform duration-300">
-                    <div className="inline-block bg-[#A238FF] text-white text-xs font-bold px-3 py-1 rounded-md uppercase tracking-wide mb-6">Premium</div>
-                    <h3 className="text-4xl font-black mb-2">1 MONTH FREE</h3>
-                    <p className="text-gray-500 font-medium mb-8">then $11.99/month</p>
-                    <Link to="/register">
-                        <button className="w-full bg-[#A238FF] text-white font-bold text-lg py-3 rounded-full mb-8 hover:bg-[#8b2df0] transition-colors shadow-lg shadow-purple-200">Try for free</button>
-                    </Link>
-                    <ul className="text-left space-y-4 text-sm md:text-base font-medium text-gray-800">
-                        <li className="flex items-start gap-3"><FaCheck className="text-[#A238FF] mt-1 flex-shrink-0" /><span>Over 120 million songs</span></li>
-                        <li className="flex items-start gap-3"><FaCheck className="text-[#A238FF] mt-1 flex-shrink-0" /><span>Mixes and playlists just for you</span></li>
-                        <li className="flex items-start gap-3"><FaCheck className="text-[#A238FF] mt-1 flex-shrink-0" /><span>Lyrics with translation</span></li>
-                        <li className="flex items-start gap-3"><FaCheck className="text-[#A238FF] mt-1 flex-shrink-0" /><span>Ad-free music</span></li>
-                        <li className="flex items-start gap-3"><FaCheck className="text-[#A238FF] mt-1 flex-shrink-0" /><span>Offline listening</span></li>
-                    </ul>
-                </div>
             </section>
 
             {/* === 3. FEATURES SECTION === */}
             <section className="py-20 px-4 md:px-8 bg-neutral-900/50">
-                <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Why Our Website?</h2>
+                <h2 className="text-3xl md:text-4xl font-bold text-center mb-16">Tại sao lại là chúng tôi?</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-6xl mx-auto px-4">
                     <div className="flex flex-col items-center text-center group">
                         <div className="w-24 h-24 mb-6 bg-neutral-900 rounded-full flex items-center justify-center group-hover:bg-neutral-800 transition-colors border border-white/10"><FaMusic className="w-10 h-10 text-[#1ED760]" /></div>
-                        <h3 className="text-xl font-bold mb-3">Play your favorites.</h3>
-                        <p className="text-neutral-400">Listen to the songs you love, and discover new music and podcasts.</p>
+                        <h3 className="text-xl font-bold mb-3">Nghe theo sở thích của bạn.</h3>
+                        <p className="text-neutral-400">Nghe những bài nhạc, và khám phá các thể loại mới.</p>
                     </div>
                     <div className="flex flex-col items-center text-center group">
                         <div className="w-24 h-24 mb-6 bg-neutral-900 rounded-full flex items-center justify-center group-hover:bg-neutral-800 transition-colors border border-white/10"><BsMusicNoteList className="w-10 h-10 text-[#1ED760]" /></div>
-                        <h3 className="text-xl font-bold mb-3">Playlists made easy.</h3>
-                        <p className="text-neutral-400">We'll help you make playlists. Or enjoy playlists made by music experts.</p>
+                        <h3 className="text-xl font-bold mb-3">Tạo playlists dễ dàng.</h3>
+                        <p className="text-neutral-400">Chúng tôi sẽ giúp bạn tạo playlists. Hoặc bạn có thể nghe những playlist được tạo bởi các chuyên gia âm nhạc.</p>
                     </div>
                     <div className="flex flex-col items-center text-center group">
                         <div className="w-24 h-24 mb-6 bg-neutral-900 rounded-full flex items-center justify-center group-hover:bg-neutral-800 transition-colors border border-white/10"><FaPodcast className="w-10 h-10 text-[#1ED760]" /></div>
-                        <h3 className="text-xl font-bold mb-3">Make it yours.</h3>
-                        <p className="text-neutral-400">Tell us what you like, and we'll recommend music for you.</p>
+                        <h3 className="text-xl font-bold mb-3">Hãy làm cho nó trở nên của riêng bạn.</h3>
+                        <p className="text-neutral-400">Hãy cho chúng tôi biết bạn thích gì, và chúng tôi sẽ gợi ý âm nhạc dành riêng cho bạn.</p>
                     </div>
                 </div>
             </section>
@@ -128,21 +131,22 @@ const LandingPage = () => {
                     </svg>
                 </div>
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-transparent to-black pointer-events-none"></div>
-                <div className="z-10 relative max-w-4xl mx-auto mt-6">
-                    <h2 className="text-4xl md:text-6xl font-black mb-8 leading-tight drop-shadow-2xl">Looking for a song?<br />You'll find it on Deezer with <br /><span className="text-[#A238FF]">high-quality sound!</span></h2>
+                <div className="z-10 relative max-w-6.2xl mx-auto mt-6 ">
+                    <h2 className="text-4xl md:text-6xl font-black mb-8 leading-normal drop-shadow-2xl max-w-none">Bạn tìm kiếm một bài nhạc?<br />Tuyệt vời!!!Bạn sẽ tìm thấy "ẻm" ở đây <br /><span className="text-[#A238FF]">đỉnh cao của nghe nhạc</span></h2>
                     <Link to="/search">
-                        <button className="bg-white text-black font-bold text-lg px-8 py-4 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(162,56,255,0.4)]">Explore our catalogue</button>
+                        <button className="bg-white text-black font-bold text-lg px-8 py-4 rounded-full hover:scale-105 transition-transform shadow-[0_0_20px_rgba(162,56,255,0.4)]">Khám phá ngay thôi nào</button>
                     </Link>
                 </div>
             </section>
 
             {/* === 5. GLOBAL REACH SECTION === */}
             <section
-                className="py-24 px-4 bg-white text-center mt-[-50px] pt-32 pb-24"
+                className="py-18 px-4 bg-white text-center mt-[-50px] pt-32 pb-18"
             >
                 <div className="max-w-5xl mx-auto">
-                    <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight text-black">The heart of music that<br className="hidden md:block" /> beats all over the world</h2>
-                    <p className="text-neutral-500 text-lg md:text-xl mb-16 font-medium">Our app is available in 180+ countries and is translated into 26 languages</p>
+                    <h2 className="text-4xl md:text-6xl font-black mb-6 leading-tight text-black">Trái tim của âm nhạc
+                        <br className="hidden md:block" /> vang vọng khắp thế giới.</h2>
+                    <p className="text-neutral-500 text-lg md:text-xl mb-16 font-medium">Âm nhạc là không phân biệt, kể cả màu da, sắc tộc, giới tính, bệnh nhân, tội phạm....</p>
                     <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
                         {[
                             { seed: "Felix", bg: "bg-pink-100" }, { seed: "Aneka", bg: "bg-purple-100" }, { seed: "Zoe", bg: "bg-orange-100" },
@@ -157,23 +161,97 @@ const LandingPage = () => {
                 </div>
             </section>
 
-            {/* === 6. MARQUEE TEXT (ĐÃ SỬA: CONG Ở ĐÁY) === */}
+            {/* === 6. MARQUEE TEXT === */}
             <section
-                className="bg-white py-12 overflow-hidden relative z-10"
-                // 👇 THÊM ĐƯỜNG CONG TẠI ĐÂY
+                className="bg-white pb-12 pt-2 overflow-hidden relative z-10"
                 style={{ borderBottomLeftRadius: '50% 50px', borderBottomRightRadius: '50% 50px' }}
             >
-                <style>{`@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } } .animate-marquee { display: flex; width: fit-content; animation: marquee 20s linear infinite; }`}</style>
-                <div className="w-full overflow-hidden">
+                <style>{`
+                    @keyframes marquee { 
+                        0% { transform: translateX(0); } 
+                        100% { transform: translateX(-50%); } 
+                    } 
+                    @keyframes marquee-reverse { 
+                        0% { transform: translateX(-50%); } 
+                        100% { transform: translateX(0); } 
+                    }
+                    .animate-marquee { 
+                        display: flex; 
+                        width: fit-content; 
+                        animation: marquee 30s linear infinite; 
+                    }
+                    .animate-marquee-reverse { 
+                        display: flex; 
+                        width: fit-content; 
+                        animation: marquee-reverse 35s linear infinite; 
+                    }
+                `}</style>
+
+                {/* DÒNG 1: CHỮ CHẠY (SANG TRÁI) */}
+                <div className="w-full overflow-hidden mb-20">
                     <div className="animate-marquee flex items-center whitespace-nowrap">
                         {[...Array(6)].map((_, i) => (
                             <div key={i} className="flex items-center gap-8 mx-4">
-                                <span className="text-5xl md:text-7xl font-black text-black uppercase tracking-tighter">by 10 million music lovers</span>
+                                <span className="text-5xl md:text-7xl font-black text-black uppercase tracking-tighter">đừng buồn nữa, hãy nghe nhạc đi</span>
                                 <FaHeart className="text-4xl md:text-6xl text-[#A238FF] animate-pulse" />
                             </div>
                         ))}
                     </div>
                 </div>
+
+                {/* KHU VỰC ẢNH BAY LƠ LỬNG (DESKTOP) */}
+                <div className="relative w-full max-w-5xl mx-auto h-[500px] hidden md:block">
+
+                    {/* --- TRUNG TÂM: THẺ CARD --- */}
+                    <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-30">
+                        <div className="bg-[#121216] text-white p-6 rounded-2xl shadow-2xl flex flex-col items-center w-64 border border-gray-800 hover:scale-105 transition-transform duration-300">
+                            <div className="flex items-center gap-4 mb-4">
+                                <div className="w-10 h-10 bg-[#1ED760] rounded-full flex items-center justify-center text-black font-bold"><FaMusic /></div>
+                                <span className="text-gray-400">to</span>
+                                <div className="w-10 h-10 bg-[#A238FF] rounded-full flex items-center justify-center font-bold">💎</div>
+                            </div>
+                            <div className="text-3xl font-bold mb-5"></div>
+                            <div className="w-full bg-gray-700 h-2 rounded-full overflow-hidden">
+                                <div className="bg-gradient-to-r from-[#1ED760] to-[#A238FF] h-full w-full animate-pulse"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* --- CÁC ẢNH VỆ TINH (Vị trí chỉnh tay để giống ảnh mẫu) --- */}
+
+                    {/* Góc Trái Trên */}
+                    <img src="https://picsum.photos/300/300?random=1" className="absolute top-0 left-[15%] w-32 h-32 rounded-xl shadow-xl rotate-[-12deg] z-10 hover:z-40 hover:scale-110 transition-all duration-300" />
+                    <img src="https://picsum.photos/300/300?random=2" className="absolute top-[20%] left-[5%] w-24 h-24 rounded-lg shadow-lg rotate-[6deg] opacity-80 hover:opacity-100 hover:scale-110 transition-all" />
+
+                    {/* Góc Phải Trên */}
+                    <img src="https://picsum.photos/300/300?random=3" className="absolute top-[5%] right-[18%] w-40 h-40 rounded-2xl shadow-2xl rotate-[15deg] z-20 hover:z-40 hover:scale-110 transition-all" />
+                    <img src="https://picsum.photos/300/300?random=4" className="absolute top-[25%] right-[8%] w-28 h-28 rounded-xl shadow-lg rotate-[-8deg] opacity-90 hover:opacity-100 hover:scale-110 transition-all" />
+
+                    {/* Góc Trái Dưới */}
+                    <img src="https://picsum.photos/300/300?random=5" className="absolute bottom-[10%] left-[20%] w-36 h-36 rounded-xl shadow-xl rotate-[5deg] z-20 hover:z-40 hover:scale-110 transition-all" />
+                    <img src="https://picsum.photos/300/300?random=6" className="absolute bottom-[25%] left-[8%] w-20 h-20 rounded-lg shadow-md rotate-[-15deg] opacity-70 hover:opacity-100 hover:scale-110 transition-all" />
+
+                    {/* Góc Phải Dưới */}
+                    <img src="https://picsum.photos/300/300?random=7" className="absolute bottom-[5%] right-[25%] w-32 h-32 rounded-xl shadow-lg rotate-[-10deg] z-10 hover:z-40 hover:scale-110 transition-all" />
+                    <img src="https://picsum.photos/300/300?random=8" className="absolute bottom-[20%] right-[12%] w-24 h-24 rounded-lg shadow-lg rotate-[8deg] opacity-80 hover:opacity-100 hover:scale-110 transition-all" />
+
+                    {/* Ảnh nhỏ rải rác thêm cho tự nhiên */}
+                    <img src="https://picsum.photos/300/300?random=9" className="absolute top-[10%] left-[40%] w-16 h-16 rounded-md shadow-sm rotate-[-20deg] opacity-60 hover:opacity-100 transition-all" />
+                    <img src="https://picsum.photos/300/300?random=10" className="absolute bottom-[15%] right-[45%] w-14 h-14 rounded-md shadow-sm rotate-[20deg] opacity-60 hover:opacity-100 transition-all" />
+
+                </div>
+
+                {/* GIAO DIỆN MOBILE (Xếp lưới đơn giản vì màn hình nhỏ không đủ chỗ bay) */}
+                <div className="grid grid-cols-2 md:hidden gap-4 px-4 mt-8">
+                    {[1, 2, 3, 4].map(i => (
+                        <img key={i} src={`https://picsum.photos/300/300?random=${i}`} className="w-full rounded-xl shadow-lg" />
+                    ))}
+                </div>
+
+                <p className="text-center text-neutral-500 mt-12 px-4 max-w-2xl mx-auto">
+                    Chúng tôi luôn sẵn sàng đồng hành cùng bạn
+                </p>
+
             </section>
 
             {/* === 7. REAL FOOTER === */}
@@ -185,7 +263,7 @@ const LandingPage = () => {
                             <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center text-white">💎</div>
                             <span className="font-bold text-xl text-white">Music App</span>
                         </div>
-                        <div className="flex gap-4">
+                        {/* <div className="flex gap-4">
                             <button className="flex items-center gap-2 bg-[#23232D] hover:bg-[#32323d] text-white px-4 py-2 rounded-md transition-colors border border-gray-700">
                                 <FaApple className="text-xl" />
                                 <div className="text-left leading-tight"><div className="text-[10px] font-medium">Download on the</div><div className="text-sm font-bold">App Store</div></div>
@@ -194,11 +272,11 @@ const LandingPage = () => {
                                 <FaGooglePlay className="text-xl" />
                                 <div className="text-left leading-tight"><div className="text-[10px] font-medium">GET IT ON</div><div className="text-sm font-bold">Google Play</div></div>
                             </button>
-                        </div>
+                        </div> */}
                     </div>
                     {/* Phần 2: Các cột Link (Grid Layout) */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-8 mb-16 text-sm">
-                        {/* Cột 1 */}
+
                         <div>
                             <h3 className="text-white font-bold mb-4">Useful links</h3>
                             <ul className="space-y-3">
@@ -210,7 +288,6 @@ const LandingPage = () => {
                             </ul>
                         </div>
 
-                        {/* Cột 2 */}
                         <div>
                             <h3 className="text-white font-bold mb-4">Features</h3>
                             <ul className="space-y-3">
@@ -222,7 +299,6 @@ const LandingPage = () => {
                             </ul>
                         </div>
 
-                        {/* Cột 3 */}
                         <div>
                             <h3 className="text-white font-bold mb-4">Live the Music</h3>
                             <ul className="space-y-3">
@@ -233,7 +309,6 @@ const LandingPage = () => {
                             </ul>
                         </div>
 
-                        {/* Cột 4 */}
                         <div>
                             <h3 className="text-white font-bold mb-4">About us</h3>
                             <ul className="space-y-3">
@@ -244,7 +319,6 @@ const LandingPage = () => {
                             </ul>
                         </div>
 
-                        {/* Cột 5 */}
                         <div>
                             <h3 className="text-white font-bold mb-4">Legal</h3>
                             <ul className="space-y-3">

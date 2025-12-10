@@ -20,6 +20,7 @@ import ArtistPage from "./pages/client/ArtistPage";
 import ProfilePage from "./pages/client/ProfilePage";
 import HistoryPage from "./pages/client/HistoryPage";
 import SongPage from "./pages/client/SongPage";
+import AuthSuccess from "./pages/client/AuthSuccess";
 
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardHome from "./pages/admin/DashboardHome";
@@ -64,6 +65,9 @@ function AppLayout() {
   const { addToast } = useToast();
   const isLoggedIn = !!user;
   const BASE_API_URL = import.meta.env.VITE_API_URL;
+
+  // ✅ STATE QUẢN LÝ HEADER (TRUE = HIỆN, FALSE = ẨN)
+  const [showMainHeader, setShowMainHeader] = useState(true);
 
   const { queue, getQueueCount } = useQueue();
 
@@ -213,16 +217,24 @@ function AppLayout() {
     <Navigate to="/admin" replace />
   ) : (
     <div className="bg-black h-screen flex flex-col">
-      <div className="hidden md:block">
-        <Header isLoggedIn={isLoggedIn} />
-      </div>
-      <div className="md:hidden">
-        <Header isLoggedIn={isLoggedIn} />
+
+      {/* ✅ BỌC HEADER ĐỂ LÀM HIỆU ỨNG TRƯỢT ẨN/HIỆN */}
+      <div
+        className={`transition-all duration-500 ease-in-out z-40 overflow-hidden ${showMainHeader
+            ? 'max-h-20 opacity-100 translate-y-0'
+            : 'max-h-0 opacity-0 -translate-y-full'
+          }`}
+      >
+        <div className="hidden md:block">
+          <Header isLoggedIn={isLoggedIn} />
+        </div>
+        <div className="md:hidden">
+          <Header isLoggedIn={isLoggedIn} />
+        </div>
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
 
-        {/* === SỬA Ở ĐÂY: Chỉ hiện Sidebar nếu isLoggedIn = true === */}
         {isLoggedIn && (
           <div className="hidden md:block h-full">
             <Sidebar
@@ -235,7 +247,10 @@ function AppLayout() {
 
         <main className="flex-1 min-w-0 p-0 md:p-2 md:pr-3 relative">
           <div className="h-full overflow-y-auto bg-black md:bg-neutral-900 md:rounded-lg main-content-scroll pb-32 md:pb-0">
-            <Outlet />
+
+            {/* ✅ TRUYỀN HÀM ĐIỀU KHIỂN HEADER XUỐNG CÁC TRANG CON */}
+            <Outlet context={{ setShowMainHeader }} />
+
           </div>
         </main>
 
@@ -266,9 +281,6 @@ function AppLayout() {
             queueCount={getQueueCount()}
             onPlayFromQueue={handlePlayFromQueue}
           />
-          /*) : (
-            
-            isLoggedIn && <PlayerBar />*/
         )}
       </div>
 
@@ -287,7 +299,6 @@ function AppLayout() {
         </div>
       )}
 
-      {/* === SỬA Ở ĐÂY: Chỉ hiện MobileNav nếu isLoggedIn = true === */}
       {isLoggedIn && <MobileNav />}
 
     </div>
@@ -298,6 +309,7 @@ function AppLayout() {
       <Route element={<div className="w-screen h-screen flex justify-center items-center bg-black"><Outlet /></div>}>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/auth/success" element={<AuthSuccess />} />
       </Route>
 
       <Route path="/" element={mainLayoutContent}>
