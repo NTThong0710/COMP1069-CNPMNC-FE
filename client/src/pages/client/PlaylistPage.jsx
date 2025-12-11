@@ -4,6 +4,7 @@ import { FaPlay, FaRegClock, FaPen, FaTimes, FaTrash } from "react-icons/fa";
 import { Music } from "lucide-react";
 // 1. IMPORT THƯ VIỆN TOAST
 import toast, { Toaster } from "react-hot-toast";
+import { useAuth } from "../../context/AuthContext";
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -41,7 +42,7 @@ export default function PlaylistPage({ onSongSelect }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-
+  const { triggerPlaylistRefresh } = useAuth();
   // State Edit Modal
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -139,6 +140,9 @@ export default function PlaylistPage({ onSongSelect }) {
   };
 
   // Bước 2: Khi bấm "Yes" trong Modal -> Gọi API và dùng Toast
+  // Đảm bảo bạn đã lấy hàm này từ useAuth ở đầu component:
+  // const { triggerPlaylistRefresh } = useAuth();
+
   const confirmDeleteSong = async () => {
     if (!confirmDeleteId) return;
     const songId = confirmDeleteId;
@@ -154,11 +158,23 @@ export default function PlaylistPage({ onSongSelect }) {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        const resData = await res.json();
-        if (!res.ok) throw new Error(resData.message || "Failed");
 
-        // Cập nhật UI
+        // Kiểm tra lỗi trước khi parse JSON (để tránh lỗi Unexpected token <)
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(errText || "Failed to delete");
+        }
+
+        // Cập nhật UI PlaylistPage (Xóa dòng bài hát ngay lập tức)
         setTracks((prev) => prev.filter((t) => t.id !== songId));
+
+        // --- QUAN TRỌNG: BẤM CHUÔNG ĐỂ UPDATE SIDEBAR ---
+        // Dùng setTimeout 500ms để chắc chắn server đã lưu xong thì mới load lại Sidebar
+        setTimeout(() => {
+          triggerPlaylistRefresh();
+        }, 500);
+        // -----------------------------------------------
+
         resolve();
       } catch (err) {
         reject(err);
@@ -187,7 +203,6 @@ export default function PlaylistPage({ onSongSelect }) {
     e.preventDefault();
     setIsSaving(true);
 
-    // Toast Promise cho việc update
     const updatePromise = new Promise(async (resolve, reject) => {
       try {
         const token = localStorage.getItem("accessToken");
@@ -199,8 +214,10 @@ export default function PlaylistPage({ onSongSelect }) {
           },
           body: JSON.stringify(editFormData),
         });
+
         if (!res.ok) throw new Error("Update failed");
 
+        // 1. Cập nhật giao diện trang hiện tại (PlaylistPage)
         setPlaylist((prev) => ({
           ...prev,
           name: editFormData.name,
@@ -208,6 +225,15 @@ export default function PlaylistPage({ onSongSelect }) {
           imageUrl: editFormData.cover,
         }));
         setIsEditModalOpen(false);
+
+        // --- 2. THÊM ĐOẠN NÀY VÀO ĐÂY ---
+        // Báo hiệu cho Sidebar tải lại để cập nhật tên và ảnh mới
+        // Dùng setTimeout nhỏ để chắc chắn DB đã lưu xong
+        setTimeout(() => {
+          triggerPlaylistRefresh();
+        }, 300);
+        // -------------------------------
+
         resolve();
       } catch (e) {
         reject(e);

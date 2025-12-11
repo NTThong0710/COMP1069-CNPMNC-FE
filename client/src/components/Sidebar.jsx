@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { GoBook, GoHistory } from "react-icons/go";
-import { FiPlus } from "react-icons/fi";
+// Import đầy đủ các icon cần dùng
+import { FiPlus, FiTrash2, FiEdit2 } from "react-icons/fi";
 import { PiArrowLineLeft } from "react-icons/pi";
-import { Heart, Music, AlertTriangle } from "lucide-react"; // Thêm icon AlertTriangle cho modal
+import { Heart, Music } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import LoginTooltip from "./LoginTooltip";
 import { useAuth } from "../context/AuthContext";
@@ -10,48 +11,50 @@ import { useToast } from "../context/ToastContext";
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
-// Component con: Từng dòng Playlist
-function PlaylistItem({ id, icon, title, subtitle, isCollapsed, onDelete, isUserPlaylist }) {
+// --- COMPONENT CON: TỪNG DÒNG PLAYLIST ---
+function PlaylistItem({ id, icon, title, subtitle, isCollapsed, onContextMenu, isActive, imageUrl }) {
   const location = useLocation();
-  const targetLink = id === "liked" ? "/likedSongs" : `/playlist/${id}`;
-  const isActive = location.pathname === targetLink;
+  // Tự động xác định trạng thái active nếu không được truyền vào
+  const active = isActive !== undefined ? isActive : (id === "liked" ? location.pathname === "/likedSongs" : location.pathname === `/playlist/${id}`);
 
   const iconElement = icon === "heart" ? <Heart className="w-5 h-5 text-white fill-current" /> : <Music className="w-5 h-5 text-neutral-400" />;
 
   return (
-    <div className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isActive && !isCollapsed ? "bg-neutral-800" : "hover:bg-[#1A1A1A]"} ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
-      <Link to={targetLink} className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
-        <div className={`w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden ${id === "liked" ? "bg-gradient-to-br from-[#450af5] to-[#8e8ee5]" : "bg-[#282828]"}`}>
-          {iconElement}
+    <div
+      // KÍCH HOẠT MENU CHUỘT PHẢI
+      onContextMenu={(e) => {
+        if (onContextMenu) {
+          e.preventDefault(); // Chặn menu mặc định của trình duyệt
+          onContextMenu(e, id, title);
+        }
+      }}
+      className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${active && !isCollapsed ? "bg-neutral-800 text-white" : "hover:bg-[#1A1A1A] text-neutral-400 hover:text-white"} ${isCollapsed ? "justify-center px-0" : "px-2"}`}
+    >
+      <Link to={id === "liked" ? "/likedSongs" : `/playlist/${id}`} className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
+        {/* KHUNG ẢNH BÌA */}
+        <div className={`w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden shadow-sm ${id === "liked" ? "bg-gradient-to-br from-[#450af5] to-[#8e8ee5]" : "bg-[#282828]"}`}>
+          {/* Logic hiển thị ảnh: Nếu có imageUrl và không phải Liked Songs thì hiện ảnh */}
+          {imageUrl && id !== "liked" ? (
+            <img src={imageUrl} alt={title} className="w-full h-full object-cover" />
+          ) : (
+            iconElement
+          )}
         </div>
+
         {!isCollapsed && (
           <div className="flex-1 min-w-0">
-            <p className={`text-sm font-semibold truncate ${isActive ? "text-green-500" : id === "liked" ? "text-white" : "text-neutral-200 group-hover:text-white"}`}>{title}</p>
-            <p className="text-xs mt-1 text-neutral-400 truncate flex items-center gap-1">{subtitle}</p>
+            <p className={`text-sm font-medium truncate ${active ? "text-green-500" : "text-inherit"}`}>{title}</p>
+            <p className="text-xs mt-1 opacity-70 truncate flex items-center gap-1">{subtitle}</p>
           </div>
         )}
       </Link>
-      
-      {/* Nút Xóa (Chỉ hiện khi hover) */}
-      {!isCollapsed && isUserPlaylist && (
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation(); // Ngăn click lan ra Link
-            onDelete(id); // Gọi hàm mở modal
-          }}
-          className="opacity-0 group-hover:opacity-100 text-neutral-400 hover:text-red-500 p-2 transition-all"
-          title="Delete playlist"
-        >
-          ✕
-        </button>
-      )}
     </div>
   );
 }
 
+// --- COMPONENT CHÍNH: SIDEBAR ---
 export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
-  const { user, likedSongsTrigger } = useAuth();
+  const { user, likedSongsTrigger, playlistUpdateTrigger, triggerPlaylistRefresh } = useAuth();
   const { addToast } = useToast();
   const location = useLocation();
 
@@ -59,7 +62,16 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
-  // --- STATE MODAL XÓA ---
+  // State Context Menu (Menu Chuột Phải)
+  const [contextMenu, setContextMenu] = useState({
+    visible: false,
+    x: 0,
+    y: 0,
+    playlistId: null,
+    playlistName: ""
+  });
+
+  // State Modal Xóa
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     playlistId: null,
@@ -68,7 +80,7 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
 
   const createPlaylistRef = useRef(null);
 
-  // Fetch Data
+  // 1. FETCH DATA (Lắng nghe cả playlistUpdateTrigger để cập nhật realtime)
   useEffect(() => {
     const fetchLatestUserData = async () => {
       if (!user) return;
@@ -80,9 +92,10 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
 
         if (res.ok) {
           const data = await res.json();
+          const userPlaylists = data.playlists || [];
           setStats({
             likedCount: data.likedSongs?.length || 0,
-            playlists: data.playlists || [],
+            playlists: userPlaylists,
           });
         }
       } catch (error) {
@@ -90,15 +103,44 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
       }
     };
     fetchLatestUserData();
-  }, [user, likedSongsTrigger]);
+  }, [user, likedSongsTrigger, playlistUpdateTrigger]);
 
-  // Tooltip & Handlers
+  // 2. ĐÓNG CONTEXT MENU KHI CLICK RA NGOÀI
   useEffect(() => {
-    const handleClickOutside = () => setIsTooltipOpen(false);
-    if (isTooltipOpen) window.addEventListener("click", handleClickOutside);
-    return () => window.removeEventListener("click", handleClickOutside);
-  }, [isTooltipOpen]);
+    const handleClick = () => {
+      if (contextMenu.visible) setContextMenu({ ...contextMenu, visible: false });
+      setIsTooltipOpen(false);
+    };
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, [contextMenu]);
 
+  // --- LOGIC HELPER: LẤY ẢNH BÌA (ROBUST VERSION) ---
+  const getPlaylistCover = (playlist) => {
+    // Ưu tiên ảnh user tự set
+    if (playlist.imageUrl) return playlist.imageUrl;
+    if (playlist.cover) return playlist.cover;
+
+    // Nếu không có, tìm ảnh bài đầu tiên
+    if (playlist.songs && playlist.songs.length > 0) {
+      const firstItem = playlist.songs[0];
+
+      // An toàn: Nếu item null hoặc chỉ là string ID -> null
+      if (!firstItem || typeof firstItem === 'string') return null;
+
+      // Cấu trúc mới: { song: { cover: ... } }
+      if (firstItem.song && typeof firstItem.song === 'object' && firstItem.song.cover) {
+        return firstItem.song.cover;
+      }
+      // Cấu trúc cũ: { cover: ... }
+      if (firstItem.cover) {
+        return firstItem.cover;
+      }
+    }
+    return null;
+  };
+
+  // --- HANDLERS ---
   const handleCreatePlaylistClick = async (event) => {
     if (!isLoggedIn) {
       event.preventDefault();
@@ -121,43 +163,54 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
         },
         body: JSON.stringify({
           name: `My Playlist #${stats.playlists.length + 1}`,
-          descripsion: "",
+          description: "",
           songs: [],
         }),
       });
-      const json = await res.json();
-      
+
+      // --- SỬA ĐỔI: Kiểm tra lỗi TRƯỚC khi parse JSON ---
       if (!res.ok) {
-        addToast(json.message || "Tạo playlist thất bại", "error");
-        return;
+        // Nếu server báo lỗi, thử đọc text lỗi
+        const errorText = await res.text();
+        throw new Error(errorText || "Server responded with error");
       }
+
+      // Nếu OK mới đọc JSON
+      const json = await res.json();
 
       setStats((prev) => ({
         ...prev,
         playlists: [...prev.playlists, json.data],
       }));
-      addToast("Đã tạo Playlist mới", "success");
+      triggerPlaylistRefresh();
+      addToast("Created Library", "success");
     } catch (err) {
-      console.error("Cannot create playlist:", err);
-      addToast("Lỗi kết nối server", "error");
+      console.error("Create Playlist Error:", err);
+      // Nếu vẫn tạo được (do lỗi cú pháp backend sau khi save), ta tạm thời không hiện lỗi
+      // Nhưng tốt nhất là bạn check terminal backend để fix triệt để.
+      addToast("Lỗi: " + err.message, "error");
     }
   };
 
-  // --- 1. HÀM MỞ MODAL ---
-  const handleOpenDeleteModal = (id) => {
-    if (!isLoggedIn) return;
-    // Tìm tên playlist để hiển thị trong modal cho chuyên nghiệp
-    const playlist = stats.playlists.find(p => p._id === id);
-    const name = playlist ? playlist.name : "Playlist này";
-
-    setDeleteModal({
-        isOpen: true,
-        playlistId: id,
-        playlistName: name
+  const handleContextMenu = (e, id, name) => {
+    setContextMenu({
+      visible: true,
+      x: e.clientX,
+      y: e.clientY,
+      playlistId: id,
+      playlistName: name
     });
   };
 
-  // --- 2. HÀM XÁC NHẬN XÓA (GỌI API) ---
+  const handleDeleteClickFromMenu = () => {
+    setDeleteModal({
+      isOpen: true,
+      playlistId: contextMenu.playlistId,
+      playlistName: contextMenu.playlistName
+    });
+    setContextMenu({ ...contextMenu, visible: false });
+  };
+
   const confirmDeletePlaylist = async () => {
     const id = deleteModal.playlistId;
     if (!id) return;
@@ -169,24 +222,25 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      const json = await res.json();
+      // --- SỬA ĐỔI: Kiểm tra lỗi TRƯỚC khi parse JSON ---
       if (!res.ok) {
-        addToast(json.msg || "Xóa playlist thất bại", "error");
-        return;
+        const errorText = await res.text();
+        throw new Error(errorText || "Delete failed");
       }
+
+      // Xóa thành công (dù có trả về json hay không thì status 200/204 đều là ok)
 
       // Update UI
       setStats((prev) => ({
         ...prev,
         playlists: prev.playlists.filter((pl) => pl._id !== id),
       }));
-
-      addToast("Đã xóa playlist", "success");
+      triggerPlaylistRefresh();
+      addToast("Removed from Library", "success");
     } catch (err) {
-      console.error("Cannot delete playlist:", err);
+      console.error("Delete Playlist Error:", err);
       addToast("Lỗi khi xóa playlist", "error");
     } finally {
-      // Đóng modal dù thành công hay thất bại
       setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" });
     }
   };
@@ -196,8 +250,9 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
   return (
     <aside className={`h-full bg-black flex flex-col transition-all duration-500 ease-in-out p-2 ${isCollapsed ? "w-[72px]" : "w-[280px] lg:w-[350px]"}`}>
       <div className="bg-[#121212] rounded-lg flex-1 flex flex-col overflow-hidden relative">
-        {/* Header Library */}
-        <div className={`flex items-center p-4 shadow-lg z-10 ${isCollapsed ? "justify-center" : "justify-between"}`}>
+
+        {/* HEADER */}
+        <div className={`flex items-center p-4 shadow-md z-10 ${isCollapsed ? "justify-center" : "justify-between"}`}>
           <div className={`flex items-center text-neutral-400 font-bold hover:text-white cursor-pointer transition gap-3`} onClick={onToggleCollapse}>
             <GoBook size={24} />
             {!isCollapsed && <span>Your Library</span>}
@@ -219,25 +274,32 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
           )}
         </div>
 
-        {/* Danh sách Item */}
+        {/* DANH SÁCH PLAYLIST */}
         {isLoggedIn ? (
-          <div className="overflow-y-auto flex-1 px-2 scrollbar-thin scrollbar-thumb-neutral-700 hover:scrollbar-thumb-neutral-600">
-            {/* Recent History */}
-            <div className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isHistoryActive && !isCollapsed ? "bg-neutral-800" : "hover:bg-[#1A1A1A]"} ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
+          <div className="overflow-y-auto flex-1 px-2 scrollbar-thin scrollbar-thumb-neutral-700 hover:scrollbar-thumb-neutral-600 pb-4">
+            {/* History Link */}
+            <div className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isHistoryActive && !isCollapsed ? "bg-neutral-800 text-white" : "hover:bg-[#1A1A1A] text-neutral-400 hover:text-white"} ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
               <Link to="/history" className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
-                <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden bg-emerald-600 text-white transition-colors">
+                <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden bg-emerald-600 text-white shadow-sm">
                   <GoHistory size={24} />
                 </div>
                 {!isCollapsed && (
                   <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-semibold truncate ${isHistoryActive ? "text-green-500" : "text-neutral-200 group-hover:text-white"}`}>Recent History</p>
+                    <p className={`text-sm font-medium truncate ${isHistoryActive ? "text-green-500" : "text-inherit"}`}>Recent History</p>
                   </div>
                 )}
               </Link>
             </div>
 
             {/* Liked Songs */}
-            <PlaylistItem id="liked" icon="heart" title="Liked Songs" subtitle={`Playlist • ${stats.likedCount} songs`} isCollapsed={isCollapsed} />
+            <PlaylistItem
+              id="liked"
+              icon="heart"
+              title="Liked Songs"
+              subtitle={`Playlist • ${stats.likedCount} songs`}
+              isCollapsed={isCollapsed}
+              isActive={location.pathname === "/likedSongs"}
+            />
 
             {/* User Playlists */}
             {stats.playlists.map((pl, index) => (
@@ -248,8 +310,8 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
                 title={pl.name || `My Playlist #${index + 1}`}
                 subtitle={`Playlist • ${user.username}`}
                 isCollapsed={isCollapsed}
-                isUserPlaylist={true}
-                onDelete={handleOpenDeleteModal} // Gọi hàm mở modal thay vì xóa luôn
+                imageUrl={getPlaylistCover(pl)} // Truyền ảnh bìa vào
+                onContextMenu={handleContextMenu} // Gắn sự kiện chuột phải
               />
             ))}
           </div>
@@ -272,44 +334,54 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
 
       <LoginTooltip isOpen={isTooltipOpen} onClose={() => setIsTooltipOpen(false)} position={tooltipPosition} />
 
-      {/* === 3. MODAL XÓA PLAYLIST (Giao diện đẹp) === */}
-      {deleteModal.isOpen && (
-        <div 
-            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200"
-            onClick={() => setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" })}
+      {/* === CONTEXT MENU (MENU CHUỘT PHẢI) === */}
+      {contextMenu.visible && (
+        <div
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          className="fixed z-[9999] bg-[#282828] min-w-[160px] rounded-md shadow-xl border border-[#3E3E3E] py-1 animate-fade-in origin-top-left"
+          onClick={(e) => e.stopPropagation()}
         >
-            <div 
-                className="w-full max-w-sm bg-[#282828] rounded-xl shadow-2xl border border-white/5 p-6 text-center transform scale-100 transition-all"
-                onClick={(e) => e.stopPropagation()}
-            >
-                <div className="flex justify-center mb-4">
-                    <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center">
-                        <AlertTriangle className="text-red-500 w-6 h-6" />
-                    </div>
-                </div>
-                
-                <h3 className="text-xl font-bold text-white mb-2">Xóa Playlist?</h3>
-                <p className="text-neutral-400 mb-6 text-sm leading-relaxed">
-                    Bạn có chắc chắn muốn xóa playlist <br/>
-                    <span className="text-white font-bold">"{deleteModal.playlistName}"</span> không?
-                    <br/>Hành động này không thể hoàn tác.
-                </p>
-                
-                <div className="flex gap-3 justify-center">
-                    <button 
-                        onClick={() => setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" })}
-                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm border border-neutral-600 hover:border-white hover:bg-neutral-800 transition min-w-[100px]"
-                    >
-                        Huỷ
-                    </button>
-                    <button 
-                        onClick={confirmDeletePlaylist}
-                        className="px-6 py-2.5 rounded-full font-bold text-white text-sm bg-red-600 hover:bg-red-500 hover:scale-105 transition shadow-lg shadow-red-900/20 min-w-[100px]"
-                    >
-                        Xóa
-                    </button>
-                </div>
+          <button
+            onClick={handleDeleteClickFromMenu}
+            className="w-full text-left px-4 py-2.5 text-sm text-neutral-200 hover:bg-[#3E3E3E] hover:text-white flex items-center gap-2 transition-colors"
+          >
+            <FiTrash2 size={16} />
+            <span>Delete</span>
+          </button>
+          {/* <button className="w-full text-left px-4 py-2.5 text-sm ..."><FiEdit2 /> Edit details</button> */}
+        </div>
+      )}
+
+      {/* === MODAL CONFIRM DELETE === */}
+      {deleteModal.isOpen && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={() => setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" })}
+        >
+          <div
+            className="w-full max-w-[320px] bg-[#282828] rounded-lg shadow-2xl p-6 text-center transform scale-100 transition-all border border-white/5"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-white mb-2">Delete from Library?</h3>
+            <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+              This will delete <span className="text-white font-bold">{deleteModal.playlistName}</span> from <br /> Your Library.
+            </p>
+
+            <div className="flex gap-4 justify-center">
+              <button
+                onClick={() => setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" })}
+                className="px-6 py-2 rounded-full font-bold text-white text-sm hover:scale-105 transition bg-transparent border border-neutral-500 hover:border-white min-w-[100px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeletePlaylist}
+                className="px-6 py-2 rounded-full font-bold text-black text-sm bg-[#1ed760] hover:bg-[#1fdf64] hover:scale-105 transition shadow-lg min-w-[100px]"
+              >
+                Delete
+              </button>
             </div>
+          </div>
         </div>
       )}
     </aside>
