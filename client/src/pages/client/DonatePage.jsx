@@ -51,23 +51,33 @@ const DonatePage = () => {
 
     // Polling check trạng thái (2s/lần)
     useEffect(() => {
-        if (!orderCode || isPaid) return;
+        let interval;
 
-        const interval = setInterval(async () => {
-            try {
-                const res = await fetch(`${API_URL}/payment/check/${orderCode}`);
-                const data = await res.json();
+        // Chỉ bắt đầu vòng lặp khi CÓ mã đơn và CHƯA thanh toán
+        if (orderCode && !isPaid) {
+            interval = setInterval(async () => {
+                try {
+                    // Gọi nhẹ API để check
+                    const res = await fetch(`${API_URL}/payment/check/${orderCode}`);
+                    const data = await res.json();
 
-                if (data.status === 'PAID') {
-                    setIsPaid(true);
-                    clearInterval(interval);
+                    if (data.status === 'PAID') {
+                        setIsPaid(true);      // 1. Cập nhật trạng thái đã thanh toán
+                        setQrUrl('');         // 2. Xóa QR đi để UI chuyển màn hình ngay
+                        setOrderCode(null);   // 3. Xóa mã đơn để chắc chắn vòng lặp không chạy lại
+                        clearInterval(interval); // 4. Ngắt vòng lặp ngay lập tức
+                    }
+                } catch (err) {
+                    console.error("Lỗi check status", err);
                 }
-            } catch (err) {
-                console.error("Lỗi check status", err);
-            }
-        }, 2000);
+            }, 2000);
+        }
 
-        return () => clearInterval(interval);
+        // Cleanup function: React tự động chạy hàm này khi component unmount 
+        // hoặc khi dependencies (isPaid) thay đổi.
+        return () => {
+            if (interval) clearInterval(interval);
+        };
     }, [orderCode, isPaid, API_URL]);
 
     const handleQuickSelect = (val) => {
