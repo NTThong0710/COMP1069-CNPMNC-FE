@@ -21,6 +21,7 @@ import ProfilePage from "./pages/client/ProfilePage";
 import HistoryPage from "./pages/client/HistoryPage";
 import SongPage from "./pages/client/SongPage";
 import AuthSuccess from "./pages/client/AuthSuccess";
+import DonatePage from './pages/client/DonatePage';
 
 import AdminLayout from "./pages/admin/AdminLayout";
 import DashboardHome from "./pages/admin/DashboardHome";
@@ -322,6 +323,7 @@ function AppLayout() {
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/history" element={<HistoryPage onSongSelect={handleSelectSong} />} />
         <Route path="/song/:songId" element={<SongPage onSongSelect={handleSelectSong} />} />
+        <Route path="/donate" element={<DonatePage />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>

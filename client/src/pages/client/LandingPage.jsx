@@ -254,9 +254,34 @@ const LandingPage = () => {
 
             </section>
 
+
+
             {/* === 7. REAL FOOTER === */}
             {/* THÊM: mt-[-50px] để kéo Footer lên nằm lấp dưới đường cong của Section trên */}
             <footer className="bg-[#121216] text-gray-400 py-16 px-4 md:px-8 pt-24 mt-[-50px] relative z-0">
+                <div className="max-w-5xl mx-auto mb-20"> {/* mb-20: Đẩy các link bên dưới ra xa một chút */}
+                    <div className="bg-gradient-to-r from-[#A238FF] to-[#6a00ff] rounded-3xl p-8 md:p-12 shadow-2xl flex flex-col md:flex-row items-center justify-between text-center md:text-left relative overflow-hidden group">
+
+                        {/* Hiệu ứng nền trang trí */}
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl transition-all group-hover:scale-150"></div>
+
+                        <div className="relative z-10">
+                            <h2 className="text-2xl md:text-3xl font-black text-white mb-3 flex items-center justify-center md:justify-start gap-3">
+                                HÃY ỦNG HỘ CHÚNG TÔI <FaHeart className="text-white animate-bounce" />
+                            </h2>
+                            <p className="text-white/90 font-medium text-base md:text-lg max-w-xl">
+                                Sự ủng hộ của bạn là nguồn động lực to lớn để team tiếp tục duy trì server và phát triển thêm nhiều tính năng mới.
+                            </p>
+                        </div>
+
+                        <Link to="/donate" className="relative z-10 mt-8 md:mt-0 shrink-0">
+                            <button className="bg-white text-[#6a00ff] font-black text-lg px-8 py-4 rounded-full shadow-xl hover:scale-105 hover:bg-gray-50 transition-all transform duration-200">
+                                DONATE NGAY
+                            </button>
+                        </Link>
+                    </div>
+                </div>
+
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row justify-between items-center mb-12">
                         <div className="flex items-center gap-2 mb-6 md:mb-0">
