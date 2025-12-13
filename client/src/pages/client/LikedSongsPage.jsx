@@ -110,7 +110,7 @@ export default function LikedSongs({ onSongSelect }) {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen text-white" onClick={closeContextMenu}>
+    <div className="min-h-screen text-white animate-fade-in" onClick={closeContextMenu}>
       {/* Header */}
       <section className="bg-gradient-to-b from-[#4c1d95] via-[#4c1d95] to-[#2e1065] p-8 flex items-end gap-6">
           <div className="w-52 h-52 bg-gradient-to-br from-indigo-500 via-purple-600 to-green-200 flex items-center justify-center rounded shadow-lg">

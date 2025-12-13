@@ -116,7 +116,7 @@ export default function ArtistPage({ onSongSelect }) {
   );
 
   return (
-    <main className="bg-neutral-900 overflow-hidden pb-16 min-h-screen">
+    <main className="bg-neutral-900 overflow-hidden pb-16 min-h-screen animate-fade-in">
       {/* HEADER */}
       <div className="relative h-[400px] flex flex-col justify-end p-8">
         <div 
@@ -186,34 +186,33 @@ export default function ArtistPage({ onSongSelect }) {
             </div>
         )}
 
-        {/* Discography */}
-        <h2 className="text-2xl font-bold text-white mb-6">Discography</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-12">
-    {albums.length > 0 ? albums.map(album => {
-        // --- LOGIC XỬ LÝ ẢNH ALBUM ---
-        // 1. Lấy ảnh album
-        // 2. Nếu ko có -> lấy ảnh artist
-        // 3. Nếu ko có nốt -> lấy ảnh mặc định
-        const albumCover = album.image || artist.image || "https://placehold.co/300x300/282828/white?text=Album";
+        {/* Discography Section */}
+<h2 className="text-xl md:text-2xl font-bold text-white mb-4 md:mb-6">Discography</h2>
 
-        return (
-            <div 
-                key={album.id} 
-                onClick={() => navigate(`/album/${album.id}`)}
-                className="cursor-pointer bg-[#181818] hover:bg-[#282828] p-4 rounded-lg transition duration-300 group"
-            >
-                <AlbumCard 
-                    id={album.id}
-                    title={album.name}
-                    artist={artist.name}
-                    image={albumCover} // <-- Truyền ảnh đã xử lý vào đây
-                    releasedate={album.releasedate}
-                />
-            </div>
-        );
-    }) : (
-        <p className="text-neutral-400 col-span-full">Chưa có album nào.</p>
-    )}
+{/* GRID SYSTEM: Đã responsive từ mobile (2 cột) đến PC (5 cột) */}
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6 mb-8 md:mb-12">
+  {albums.length > 0 ? (
+    albums.map((album) => {
+      // Logic fallback ảnh (nếu album không có ảnh thì lấy ảnh artist hoặc ảnh mặc định)
+      const albumCover =
+        album.image ||
+        artist.image ||
+        "https://placehold.co/300x300/282828/white?text=Album";
+
+      return (
+        <AlbumCard
+          key={album.id}
+          id={album.id}
+          title={album.name}
+          artist={artist.name}
+          image={albumCover}
+          releasedate={album.releasedate}
+        />
+      );
+    })
+  ) : (
+    <p className="text-neutral-400 col-span-full">Chưa có album nào.</p>
+  )}
 </div>
 
         {/* Stats */}

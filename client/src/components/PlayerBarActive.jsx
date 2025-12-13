@@ -59,7 +59,11 @@ function PlayerBarActive({
         }
     }, [song, user]); // Phụ thuộc vào song và user
 
-    const handleToggleLike = async () => {
+    const handleToggleLike = async (e) => {
+        if (e) {
+        e.stopPropagation(); // Ngăn click lan ra thẻ cha
+        e.preventDefault();  // Ngăn hành vi mặc định (như submit form)
+    }
         if (!user) return alert("Vui lòng đăng nhập để thích bài hát!");
         const newStatus = !isLiked;
         setIsLiked(newStatus);
@@ -209,7 +213,8 @@ function PlayerBarActive({
 
                 {/* Like Button (Ẩn trên mobile nhỏ quá thì hiện ở SongPage, nhưng ở đây tui giữ lại) */}
                 <button
-                    onClick={handleToggleLike}
+                    type='button'
+                    onClick={(e) => handleToggleLike(e)}
                     aria-label={isLiked ? "Unlike song" : "Like song"}
                     className={` sm:block hover:scale-105 transition ${isLiked ? 'text-green-500' : 'text-neutral-400 hover:text-white'}`}
                 >

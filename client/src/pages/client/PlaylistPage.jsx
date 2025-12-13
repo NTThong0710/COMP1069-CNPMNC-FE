@@ -288,7 +288,7 @@ export default function PlaylistPage({ onSongSelect }) {
     "bg-gradient-to-br from-indigo-500 to-purple-700";
 
   return (
-    <main className="min-h-screen bg-[#121212] pb-24 font-sans text-[#b3b3b3] relative">
+    <main className="min-h-screen bg-[#121212] pb-24 font-sans text-[#b3b3b3] relative animate-fade-in">
       {/* 3. CẤU HÌNH TOASTER GLOBAL */}
       <Toaster position="bottom-center" />
 
@@ -298,7 +298,9 @@ export default function PlaylistPage({ onSongSelect }) {
           onClick={() => setIsEditModalOpen(true)}
           className="group w-40 h-40 sm:w-52 sm:h-52 shadow-2xl flex items-center justify-center bg-[#282828] overflow-hidden rounded-md flex-shrink-0 cursor-pointer relative"
         >
-          {typeof coverImage === "string" && coverImage.startsWith("http") ? (
+          {coverImage && 
+          typeof coverImage === "string" && 
+          !coverImage.includes("bg-gradient") ? (
             <img
               src={coverImage}
               alt={playlist.name}
@@ -306,7 +308,7 @@ export default function PlaylistPage({ onSongSelect }) {
             />
           ) : (
             <Music size={80} className="text-white/60" />
-          )}
+          )}  
           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40">
             <div className="text-white text-xs font-bold flex flex-col items-center">
               <FaPen className="mb-1" />

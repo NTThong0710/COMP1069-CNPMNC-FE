@@ -11,6 +11,7 @@ import ScrollableSection from "../../components/ScrollableSection";
 import { useAuth } from "../../context/AuthContext";
 
 import LandingPage from './LandingPage';
+import SkeletonCard from "../../components/SkeletonCard";
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 const formatDuration = (seconds) => {
@@ -18,6 +19,14 @@ const formatDuration = (seconds) => {
   const min = Math.floor(seconds / 60);
   const sec = Math.floor(seconds % 60);
   return `${min}:${sec < 10 ? "0" : ""}${sec}`;
+};
+
+// Hàm lấy lời chào theo thời gian (Sáng/Chiều/Tối)
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Chào buổi sáng";
+  if (hour < 18) return "Chào buổi chiều";
+  return "Chào buổi tối";
 };
 
 export default function HomePage({ onSongSelect }) {
@@ -53,7 +62,6 @@ export default function HomePage({ onSongSelect }) {
       }
 
       try {
-        // ... (Logic map data giữ nguyên như cũ) ...
         const mapSongData = (song) => {
           const artistObj =
             typeof song.artist === "object" ? song.artist : null;
@@ -162,25 +170,17 @@ export default function HomePage({ onSongSelect }) {
           try {
             const token = localStorage.getItem("accessToken");
             const res = await fetch(`${BASE_API_URL}/playlists/me`, {
-              // Đảm bảo route này gọi vào hàm getMyPlaylists mới viết
               headers: { Authorization: `Bearer ${token}` },
             });
 
             if (res.ok) {
               const data = await res.json();
-
-              // Vì BE mới trả về { success: true, playlists: [...] }
-              // Và dữ liệu MongoDB đã có sẵn _id, songs
               const rawPlaylists = data.playlists || [];
-
-              // Map lại cho chắc chắn đúng format Modal cần
               const formattedPlaylists = rawPlaylists.map((pl) => ({
-                _id: pl._id, // Mongo dùng _id
+                _id: pl._id,
                 name: pl.name,
                 songs: pl.songs || [],
-                // Nếu bạn có lưu ảnh playlist thì thêm vào, ko thì dùng icon mặc định
               }));
-
               setMyPlaylists(formattedPlaylists);
             }
           } catch (err) {
@@ -198,20 +198,17 @@ export default function HomePage({ onSongSelect }) {
     };
 
     fetchData();
-  }, [user, isLoggedIn]); // Thêm dependency isLoggedIn
+  }, [user, isLoggedIn]);
 
-  // Xử lý Click vào thẻ bài hát (Nghe nhạc)
+  // Xử lý Click vào thẻ bài hát
   const handleItemClick = (item, playlist = [], index = 0) => {
     if (!isLoggedIn) {
       setSelectedCardImage(item.image || "");
       setIsLoginModalOpen(true);
     } else {
-      // Nếu là album thì navigate
       if (!item.url && item.id && !playlist.length) {
         navigate(`/album/${item.id}`);
-      }
-      // Nếu là bài hát thì play
-      else if (item.url && onSongSelect) {
+      } else if (item.url && onSongSelect) {
         onSongSelect(item, playlist, index);
       }
     }
@@ -221,7 +218,6 @@ export default function HomePage({ onSongSelect }) {
   const cardContainerClass =
     "w-32 sm:w-36 md:w-40 lg:w-48 xl:w-56 flex-shrink-0";
 
-  // Hàm render song item
   const renderSongItem = (song, playlist, index) => (
     <div key={song.id} className={cardContainerClass}>
       <div
@@ -234,78 +230,106 @@ export default function HomePage({ onSongSelect }) {
   );
 
   if (!isLoggedIn) return <LandingPage />;
+  
 
   return (
-    <main className="p-4 md:p-4 lg:p-6 pb-24">
-      {/* 0. DÀNH RIÊNG CHO BẠN */}
-      {recommendedSongs.length > 0 && (
-        <ScrollableSection title={`Dành riêng cho ${user?.username || "bạn"}`}>
-          {recommendedSongs.map((song, index) =>
-            renderSongItem(song, recommendedSongs, index)
+    // THÊM BACKGROUND GRADIENT Ở ĐÂY
+    <main className="relative min-h-screen bg-neutral-900 pb-24 overflow-hidden animate-fade-in">
+      {/* Lớp phủ Gradient mờ ảo phía trên cùng */}
+      <div className="absolute top-0 left-0 right-0 h-80 bg-gradient-to-b from-indigo-900/60 to-neutral-900 z-0 pointer-events-none" />
+
+      {/* Nội dung chính (thêm z-10 để nổi lên trên nền gradient) */}
+      <div className="relative z-10 p-4 md:p-6 lg:p-8 space-y-8">
+        
+        {/* 0. DÀNH RIÊNG CHO BẠN */}
+        {recommendedSongs.length > 0 && (
+          <ScrollableSection 
+            title={
+                <span className="flex flex-col gap-1">
+                    <span className="text-sm font-normal text-neutral-400 uppercase tracking-wider">{getGreeting()}</span>
+                    <span>Dành riêng cho {user?.username || "bạn"}</span>
+                </span>
+            }
+          >
+            {recommendedSongs.map((song, index) =>
+              renderSongItem(song, recommendedSongs, index)
+            )}
+          </ScrollableSection>
+        )}
+{/* 1. BÀI HÁT THỊNH HÀNH */}
+        <ScrollableSection title="Bài hát thịnh hành">
+          {loading ? (
+            [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+          ) : topSongs.length > 0 ? (
+            topSongs.map((song, index) => renderSongItem(song, topSongs, index))
+          ) : (
+            <p className="text-neutral-400">Chưa có bài hát thịnh hành.</p>
           )}
         </ScrollableSection>
-      )}
 
-      {/* 1. BẢNG XẾP HẠNG */}
-      <ScrollableSection title="Bảng xếp hạng thịnh hành">
-        {topSongs.length > 0
-          ? topSongs.map((song, index) => renderSongItem(song, topSongs, index))
-          : !loading && (
-            <p className="text-neutral-400">Chưa có bảng xếp hạng.</p>
+        {/* 2. TUYỂN TẬP HIT (Nghe nhiều nhất) */}
+        <ScrollableSection title="Tuyển tập Hit nghe nhiều nhất">
+          {loading ? (
+            [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+          ) : mostPlayedSongs.length > 0 ? (
+            mostPlayedSongs.map((song, index) =>
+              renderSongItem(song, mostPlayedSongs, index)
+            )
+          ) : (
+            <p className="text-neutral-400">Chưa có dữ liệu.</p>
           )}
-      </ScrollableSection>
+        </ScrollableSection>
 
-      {/* 2. NGHE NHIỀU NHẤT */}
-      <ScrollableSection title="Nghe nhiều nhất">
-        {loading ? (
-          <p className="text-white animate-pulse">Loading...</p>
-        ) : mostPlayedSongs.length > 0 ? (
-          mostPlayedSongs.map((song, index) =>
-            renderSongItem(song, mostPlayedSongs, index)
-          )
-        ) : (
-          <p className="text-neutral-400">Chưa có dữ liệu.</p>
-        )}
-      </ScrollableSection>
-
-      {/* 3. MỚI PHÁT HÀNH */}
-      <ScrollableSection title="Mới phát hành">
-        {newReleases.length > 0
-          ? newReleases.map((song, index) =>
-            renderSongItem(song, newReleases, index)
-          )
-          : !loading && (
-            <p className="text-neutral-400">Chưa có bài hát mới.</p>
+        {/* 3. MỚI PHÁT HÀNH */}
+        <ScrollableSection title="Mới phát hành">
+          {loading ? (
+            [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+          ) : newReleases.length > 0 ? (
+            newReleases.map((song, index) =>
+              renderSongItem(song, newReleases, index)
+            )
+          ) : (
+            <p className="text-neutral-400">Chưa có dữ liệu.</p>
           )}
-      </ScrollableSection>
+        </ScrollableSection>
 
-      {/* 4. NGHỆ SĨ (Giữ nguyên, không có nút add playlist) */}
-      <ScrollableSection title="Nghệ sĩ nổi bật">
-        {popularArtists.length > 0 &&
-          popularArtists.map((artist) => (
-            <div key={artist.id} className={cardContainerClass}>
-              <ArtistCard {...artist} />
-            </div>
-          ))}
-      </ScrollableSection>
+        {/* 4. NGHỆ SĨ (Thêm type="artist" để Skeleton tròn) */}
+        <ScrollableSection title="Nghệ sĩ yêu thích">
+          {loading ? (
+            [...Array(6)].map((_, i) => <SkeletonCard key={i} type="artist" />)
+          ) : popularArtists.length > 0 ? (
+            popularArtists.map((artist) => (
+              <div key={artist.id} className={cardContainerClass}>
+                <ArtistCard {...artist} />
+              </div>
+            ))
+          ) : (
+            <p className="text-neutral-400">Chưa có dữ liệu.</p>
+          )}
+        </ScrollableSection>
 
-      {/* 5. ALBUM */}
-      <ScrollableSection title="Album phổ biến">
-        {popularAlbums.map((album) => (
-          <div key={album.id} className={cardContainerClass}>
-            <div
-              onClick={() => handleItemClick(album)}
-              className="cursor-pointer"
-            >
-              <AlbumCard {...album} />
-            </div>
-          </div>
-        ))}
-      </ScrollableSection>
+        {/* 5. ALBUM */}
+        <ScrollableSection title="Album đáng nghe">
+          {loading ? (
+            [...Array(6)].map((_, i) => <SkeletonCard key={i} />)
+          ) : popularAlbums.length > 0 ? (
+            popularAlbums.map((album) => (
+              <div key={album.id} className={cardContainerClass}>
+                <div
+                  onClick={() => handleItemClick(album)}
+                  className="cursor-pointer"
+                >
+                  <AlbumCard {...album} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-neutral-400">Chưa có dữ liệu.</p>
+          )}
+        </ScrollableSection>
+      </div>
 
       {/* --- CÁC MODAL --- */}
-
-      {/* Modal yêu cầu đăng nhập */}
       <LoginPromptModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}

@@ -52,7 +52,7 @@ const LandingPage = () => {
     };
 
     return (
-        <div className="text-white min-h-full relative bg-black font-sans">
+        <div className="text-white min-h-full relative bg-black font-sans animate-fade-in">
 
             {/* === STICKY HEADER === */}
             <div

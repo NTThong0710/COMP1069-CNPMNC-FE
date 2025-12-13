@@ -119,10 +119,10 @@ export default function HistoryPage({ onSongSelect }) {
 
   // === GIAO DIỆN ===
   if (!user) return <div className="min-h-screen flex items-center justify-center text-white text-lg">Vui lòng đăng nhập để xem lịch sử.</div>;
-  if (loading) return <div className="min-h-screen p-8 text-white text-lg animate-pulse">Đang tải lịch sử...</div>;
+//   if (loading) return <div className="min-h-screen p-8 text-white text-lg animate-pulse">Đang tải lịch sử...</div>;
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen text-white animate-fade-in">
       {/* Header Section */}
       <section className="bg-gradient-to-b from-emerald-800 via-emerald-900 to-[#121212] p-8 flex items-end gap-6">
         <div className="w-52 h-52 bg-emerald-600 flex items-center justify-center rounded shadow-lg">

@@ -65,7 +65,7 @@ export const SimilarSongsSection = ({ songId, onSongSelect }) => {
     if (loading || songs.length === 0) return null;
 
     return (
-        <div className="mt-6 bg-black/20 rounded-lg p-4">
+        <div className="mt-6 bg-black/20 rounded-lg p-4 mb-10">
             <div className="flex items-center gap-2 mb-3 text-white font-bold border-b border-neutral-700 pb-2">
                 <Disc size={18} /> <span>Recommended for you</span>
             </div>
@@ -109,8 +109,7 @@ export const ArtistInfoSection = ({ song }) => {
     if (!song) return null;
 
     const displayArtistName = artistInfo?.name || getArtistName(song.artist);
-    
-    // ✅ FIX: Thêm song.artistImage vào fallback
+
     // Thứ tự ưu tiên: Info mới fetch > Info có sẵn trong song > Ảnh bài hát
     const displayArtistImage = artistInfo?.image || artistInfo?.avatar || 
                               song.artistImage || // Lấy từ lúc click bài hát
@@ -162,7 +161,7 @@ export default function RightSidebar({ song, onClose, onSongSelect }) {
                      : '#';
 
   return (
-    <aside className="h-full bg-neutral-900 rounded-lg flex flex-col overflow-hidden text-white ml-2">
+    <aside className="h-full bg-neutral-900 rounded-lg flex flex-col overflow-hidden text-white ml-2 pb-10">
       <div className="flex items-center justify-between p-4 flex-shrink-0 bg-neutral-900 z-10">
         <span className="font-bold text-base hover:underline cursor-pointer truncate pr-2">
           {song.title || "Now Playing"}

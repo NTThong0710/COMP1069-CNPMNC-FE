@@ -48,7 +48,7 @@ const CommentInput = ({ placeholder, onSubmit, onCancel, autoFocus, initialValue
             onClick={onCancel}
             className="text-xs text-neutral-400 hover:text-white px-2 py-1 rounded transition"
           >
-            Cancel
+            x
           </button>
         )}
         <button
