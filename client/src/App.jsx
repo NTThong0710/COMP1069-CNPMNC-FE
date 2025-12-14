@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { BrowserRouter, Routes, Route, Outlet, useLocation, Link, Navigate } from "react-router-dom";
 import { GoHome, GoSearch, GoBook } from "react-icons/go";
+import { FaHistory, FaListUl } from "react-icons/fa"; // ✅ IMPORT ICON MỚI
 
 // Components & Pages
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
-import PlayerBar from "./components/PlayerBar";
+import PlayerBar from "./components/PlayerBar"; // Giữ lại nếu cần dùng fallback
 import PlayerBarActive from "./components/PlayerBarActive";
 import RightSidebar from "./components/RightSidebar";
 import ToastContainer from "./components/ToastContainer";
@@ -37,25 +38,206 @@ import { useToast } from "./context/ToastContext";
 
 const SCROLL_SELECTOR = ".main-content-scroll";
 
-// === COMPONENT MOBILE NAVIGATION ===
+// === COMPONENT MOBILE NAVIGATION (ĐÃ CẬP NHẬT) ===
 const MobileNav = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
 
+  // Class chung cho các item
+  const navItemClass = (path) => 
+    `flex flex-col items-center gap-1 w-1/4 ${isActive(path) ? 'text-green-500' : 'text-neutral-400 hover:text-white'}`;
+
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-neutral-800 flex justify-around items-center h-16 z-50 pb-safe">
-      <Link to="/" aria-label="Home" className={`flex flex-col items-center gap-1 ${isActive('/') ? 'text-white' : 'text-neutral-400'}`}>
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-neutral-800 flex justify-between items-center h-16 z-50 pb-safe px-2">
+      
+      {/* 1. Home */}
+      <Link to="/" aria-label="Home" className={navItemClass('/')}>
         <GoHome size={24} />
-        <span className="text-[10px]">Home</span>
+        <span className="text-[10px] font-medium">Home</span>
       </Link>
-      <Link to="/search" aria-label="Search" className={`flex flex-col items-center gap-1 ${isActive('/search') ? 'text-white' : 'text-neutral-400'}`}>
-        <GoSearch size={24} />
-        <span className="text-[10px]">Search</span>
+
+      {/* 2. History (Thay cho Search) */}
+      <Link to="/history" aria-label="History" className={navItemClass('/history')}>
+        <FaHistory size={22} />
+        <span className="text-[10px] font-medium">History</span>
       </Link>
-      <Link to="/likedSongs" aria-label="Library" className={`flex flex-col items-center gap-1 ${isActive('/likedSongs') ? 'text-white' : 'text-neutral-400'}`}>
+
+      {/* 3. Library (Liked Songs) */}
+      <Link to="/likedSongs" aria-label="Liked" className={navItemClass('/likedSongs')}>
         <GoBook size={24} />
-        <span className="text-[10px]">Library</span>
+        <span className="text-[10px] font-medium">Liked</span>
       </Link>
+
+      {/* 4. Playlists (MỚI THÊM) */}
+      <Link to="/playlists" aria-label="Playlists" className={navItemClass('/playlists')}>
+        <FaListUl size={22} />
+        <span className="text-[10px] font-medium">Playlists</span>
+      </Link>
+
+    </div>
+  );
+};
+
+// === COMPONENT MY PLAYLISTS PAGE (DÀNH CHO MOBILE) ===
+// Nhớ import thêm hook useToast ở trên đầu file App.jsx nếu chưa có:
+// import { useToast } from "./context/ToastContext"; 
+
+// === COMPONENT MY PLAYLISTS PAGE (ĐÃ CÓ CHỨC NĂNG TẠO MỚI) ===
+const MyPlaylistsPage = () => {
+  const { user } = useAuth();
+  const { addToast } = useToast(); // Dùng toast để thông báo
+  const BASE_API_URL = import.meta.env.VITE_API_URL;
+
+  const [playlists, setPlaylists] = useState([]);
+  
+  // State cho Modal tạo mới
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newPlaylistName, setNewPlaylistName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Fetch danh sách playlist ban đầu
+  useEffect(() => {
+    const fetchPlaylists = async () => {
+      if (!user) return;
+      try {
+        const token = localStorage.getItem("accessToken");
+        const res = await fetch(`${BASE_API_URL}/playlists/me`, {
+           headers: { Authorization: `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPlaylists(data.playlists || []);
+        }
+      } catch (err) { console.error(err); }
+    };
+    fetchPlaylists();
+  }, [user]);
+
+  // Xử lý tạo Playlist
+  const handleCreatePlaylist = async () => {
+    if (!newPlaylistName.trim()) {
+      addToast("Playlist name cannot be empty", "error");
+      return;
+    }
+
+    setIsCreating(true);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`${BASE_API_URL}/playlists`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: newPlaylistName,
+          description: "",
+          songs: [],
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const newPlaylist = data.data || data; // Tùy cấu trúc trả về của BE
+        
+        // Cập nhật UI ngay lập tức
+        setPlaylists((prev) => [newPlaylist, ...prev]);
+        
+        addToast("Playlist created successfully!", "success");
+        setNewPlaylistName(""); // Reset tên
+        setIsCreateModalOpen(false); // Đóng modal
+      } else {
+        const errData = await res.json();
+        addToast(errData.message || "Failed to create playlist", "error");
+      }
+    } catch (error) {
+      console.error(error);
+      addToast("Something went wrong", "error");
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  return (
+    <div className="p-4 pt-8 text-white min-h-screen pb-24">
+      <h2 className="text-2xl font-bold mb-6">Your Playlists</h2>
+      <div className="grid grid-cols-2 gap-4">
+        
+        {/* 1. Nút tạo Playlist mới (Có onClick mở Modal) */}
+        <div 
+          onClick={() => setIsCreateModalOpen(true)}
+          className="aspect-square bg-neutral-800 rounded-lg flex flex-col items-center justify-center border border-dashed border-neutral-600 opacity-70 cursor-pointer hover:opacity-100 hover:bg-neutral-700 transition"
+        >
+           <span className="text-4xl text-neutral-400">+</span>
+           <span className="text-xs mt-2 text-neutral-400">Create New</span>
+        </div>
+
+        {/* 2. Danh sách Playlist */}
+        {playlists.map(pl => {
+            // Logic lấy ảnh (như đã làm trước đó)
+            let coverImage = pl.imageUrl || pl.cover || pl.image;
+            if (!coverImage && pl.songs && pl.songs.length > 0) {
+                const firstItem = pl.songs[0];
+                const songData = firstItem.song || firstItem; 
+                coverImage = songData.cover || songData.image || songData.imageUrl;
+            }
+
+            return (
+              <Link to={`/playlist/${pl._id}`} key={pl._id} className="block group">
+                <div className="aspect-square bg-neutral-800 rounded-lg overflow-hidden mb-2 relative shadow-lg">
+                    {coverImage && !coverImage.includes("bg-gradient") ? (
+                        <img 
+                            src={coverImage} 
+                            alt={pl.name} 
+                            className="w-full h-full object-cover group-hover:opacity-80 transition"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-800 group-hover:opacity-80 transition flex items-center justify-center">
+                            <span className="font-bold text-2xl uppercase">{pl.name?.[0]}</span>
+                        </div>
+                    )}
+                </div>
+                <p className="font-bold truncate text-sm">{pl.name}</p>
+                <p className="text-xs text-neutral-400">{pl.songs?.length || 0} songs</p>
+              </Link>
+            );
+        })}
+      </div>
+
+      {/* --- MODAL TẠO PLAYLIST --- */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-[#282828] w-full max-w-sm rounded-xl p-6 shadow-2xl border border-neutral-700">
+            <h3 className="text-xl font-bold text-white mb-4 text-center">Give your playlist a name</h3>
+            
+            <input
+              type="text"
+              autoFocus
+              value={newPlaylistName}
+              onChange={(e) => setNewPlaylistName(e.target.value)}
+              placeholder="My Awesome Playlist"
+              className="w-full bg-[#3e3e3e] text-white p-3 rounded-lg border border-transparent focus:border-white outline-none mb-6 text-center placeholder-neutral-500"
+              onKeyDown={(e) => e.key === "Enter" && handleCreatePlaylist()}
+            />
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setIsCreateModalOpen(false)}
+                className="flex-1 py-3 rounded-full font-bold text-white bg-transparent border border-neutral-600 hover:border-white transition"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreatePlaylist}
+                disabled={isCreating || !newPlaylistName.trim()}
+                className="flex-1 py-3 rounded-full font-bold text-black bg-green-500 hover:bg-green-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCreating ? "Creating..." : "Create"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -222,7 +404,7 @@ function AppLayout() {
       {/* ✅ BỌC HEADER ĐỂ LÀM HIỆU ỨNG TRƯỢT ẨN/HIỆN */}
       <div
         className={`transition-all duration-500 ease-in-out z-40 overflow-hidden ${showMainHeader
-          ? 'max-h-20 opacity-100 translate-y-0 overflow-visible' // 👈 SỬA: Khi hiện thì cho phép tràn (để hiện menu)
+          ? 'max-h-20 opacity-100 translate-y-0 overflow-visible'
           : 'max-h-0 opacity-0 -translate-y-full overflow-hidden'
           }`}
       >
@@ -324,6 +506,9 @@ function AppLayout() {
         <Route path="/history" element={<HistoryPage onSongSelect={handleSelectSong} />} />
         <Route path="/song/:songId" element={<SongPage onSongSelect={handleSelectSong} />} />
         <Route path="/donate" element={<DonatePage />} />
+        
+        {/* ✅ ROUTE MỚI CHO PLAYLIST */}
+        <Route path="/playlists" element={<MyPlaylistsPage />} />
       </Route>
 
       <Route path="/admin" element={<AdminLayout />}>

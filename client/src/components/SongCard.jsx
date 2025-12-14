@@ -1,5 +1,6 @@
 import { FaPlay } from "react-icons/fa";
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import SongTooltip from "./SongTooltip";
 
 function SongCard(props) {
@@ -13,7 +14,13 @@ function SongCard(props) {
   const handleContextMenu = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setTooltipPos({ x: e.clientX, y: e.clientY });
+    
+    // Dùng clientX/Y + scroll position
+    setTooltipPos({ 
+      x: e.clientX + window.scrollX, 
+      y: e.clientY + window.scrollY 
+    });
+    
     setShowTooltip(true);
   };
 
@@ -72,14 +79,15 @@ function SongCard(props) {
         </div>
       </div>
 
-      {/* Tooltip (Right-click) */}
-      {showTooltip && songData && (
+      {/* Tooltip (Right-click) - Render qua Portal để thoát khỏi transform context */}
+      {showTooltip && songData && createPortal(
         <SongTooltip
           song={songData}
           position={tooltipPos}
           onClose={() => setShowTooltip(false)}
           onPlaySong={handlePlayClick}
-        />
+        />,
+        document.body // Render trực tiếp vào body
       )}
     </>
   );

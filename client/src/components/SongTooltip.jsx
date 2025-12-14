@@ -144,32 +144,40 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
     }
   };
 
-  const getTooltipPosition = () => {
-    const tooltipWidth = 320; 
-    const tooltipHeight = 350; 
-    let x = position.x;
-    let y = position.y;
+const getTooltipPosition = () => {
+  const tooltipWidth = 320; 
+  const tooltipHeight = 350; 
+  
+  // FIX: Dùng position.x/y trực tiếp (đã là pageX/pageY từ SongCard)
+  let x = position.x;
+  let y = position.y;
 
-    if (x + tooltipWidth > window.innerWidth) {
-      x = window.innerWidth - tooltipWidth - 10;
-    }
+  // Kiểm tra tràn viewport
+  const viewportWidth = window.innerWidth + window.scrollX;
+  const viewportHeight = window.innerHeight + window.scrollY;
 
-    if (y + tooltipHeight > window.innerHeight) {
-      y = position.y - tooltipHeight - 10;
-    }
+  // Điều chỉnh nếu tràn phải
+  if (x + tooltipWidth > viewportWidth) {
+    x = x - tooltipWidth - 10;
+  }
 
-    return { left: `${x}px`, top: `${y}px` };
-  };
+  // Điều chỉnh nếu tràn dưới
+  if (y + tooltipHeight > viewportHeight) {
+    y = y - tooltipHeight - 10;
+  }
+
+  return { left: `${x}px`, top: `${y}px` };
+};
 
   const tooltipPosition = getTooltipPosition();
 
   return (
     <>
       <div
-        ref={tooltipRef}
-        className="fixed bg-[#282828] rounded-2xl shadow-2xl z-50 overflow-hidden border border-neutral-700 w-80 animate-in fade-in zoom-in-95 duration-200"
-        style={tooltipPosition}
-      >
+  ref={tooltipRef}
+  className="absolute bg-[#282828] rounded-2xl shadow-2xl z-[9999] overflow-hidden border border-neutral-700 w-80 animate-in fade-in zoom-in-95 duration-200"
+  style={tooltipPosition}
+>
         <div className="relative group">
           <img
             src={song.image || song.albumImage || "/placeholder.jpg"}
