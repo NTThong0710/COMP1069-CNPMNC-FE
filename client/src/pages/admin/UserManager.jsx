@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 // Thêm ChevronRight vào dòng import này
 import { Search, Loader2, Trash2, User, Shield, Eye, X, History, Heart, Disc, Music, ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -203,6 +204,7 @@ const UserDetailPanel = ({ userId, onClose }) => {
 
 // === COMPONENT CHÍNH: USER MANAGER (Giữ nguyên logic của bạn) ===
 export default function UserManager() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -284,10 +286,37 @@ export default function UserManager() {
                             <td className="px-6 py-4"><span className={`px-2 py-1 rounded text-xs font-bold flex w-fit items-center gap-1 ${u.role === 'admin' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{u.role === 'admin' ? <Shield size={12}/> : <User size={12}/>}{u.role}</span></td>
                             <td className="px-6 py-4">{u.playlistCount}</td>
                             <td className="px-6 py-4">{new Date(u.createdAt).toLocaleDateString()}</td>
+                            {/* Cột Action */}
                             <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-2">
-                                    <button onClick={() => setSelectedUserId(u._id)} aria-label="View user details" className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-blue-400 transition"><Eye size={16}/></button>
-                                    <button onClick={() => handleDelete(u._id)} aria-label="Delete user" className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-red-400 transition"><Trash2 size={16}/></button>
+                                <div className="flex justify-end gap-2 items-center">
+                                    
+                                    {/* 1. NÚT XEM: Chỉ hiện nếu Role KHÔNG PHẢI là Admin */}
+                                    {u.role !== 'admin' ? (
+                                        <button 
+                                            onClick={() => setSelectedUserId(u._id)} 
+                                            aria-label="View user details" 
+                                            className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-blue-400 transition"
+                                        >
+                                            <Eye size={16}/>
+                                        </button>
+                                    ) : (
+                                        // Nếu là Admin thì hiện khoảng trắng hoặc icon Shield để lấp chỗ trống cho đẹp (tùy chọn)
+                                        <span className="p-2 w-[32px]"></span> 
+                                    )}
+
+                                    {/* 2. NÚT XÓA: Chỉ hiện nếu KHÔNG PHẢI là chính mình */}
+                                    {currentUser?._id !== u._id ? (
+                                        <button 
+                                            onClick={() => handleDelete(u._id)} 
+                                            aria-label="Delete user" 
+                                            className="p-2 hover:bg-zinc-800 rounded-md text-zinc-500 hover:text-red-400 transition"
+                                        >
+                                            <Trash2 size={16}/>
+                                        </button>
+                                    ) : (
+                                        // Nếu là chính mình thì hiện chữ You
+                                        <span className="text-xs text-zinc-600 italic px-2 select-none">You</span>
+                                    )}
                                 </div>
                             </td>
                         </tr>

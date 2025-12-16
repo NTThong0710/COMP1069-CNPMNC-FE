@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
   const fetchUserProfile = async (accessToken) => {
     try {
       const res = await fetch(`${BASE_API_URL}/auth/profile`, {
-        headers: { "Authorization": `Bearer ${accessToken}` }
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
 
       if (res.ok) {
@@ -73,7 +73,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("refreshToken", data.refreshToken);
 
-      // 🔥 FIX: Thay vì dùng data.user do Login trả về (có thể thiếu field), 
+      // 🔥 FIX: Thay vì dùng data.user do Login trả về (có thể thiếu field),
       // ta gọi fetchUserProfile để lấy đầy đủ (bao gồm cả playlists, history, avatar...)
       const fullUserData = await fetchUserProfile(data.accessToken);
 
@@ -131,23 +131,25 @@ export const AuthProvider = ({ children }) => {
   };
 
   const triggerRefreshLikedSongs = () => {
-    setLikedSongsTrigger(prev => prev + 1);
+    setLikedSongsTrigger((prev) => prev + 1);
   };
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      login,
-      register,
-      logout,
-      loading,
-      likedSongsTrigger,
-      triggerRefreshLikedSongs,
-      updateUser,
-      playlistUpdateTrigger,
-      triggerPlaylistRefresh,
-      fetchUserProfile // Xuất thêm hàm này nếu component con muốn tự gọi reload
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        register,
+        logout,
+        loading,
+        likedSongsTrigger,
+        triggerRefreshLikedSongs,
+        updateUser,
+        playlistUpdateTrigger,
+        triggerPlaylistRefresh,
+        fetchUserProfile, // Xuất thêm hàm này nếu component con muốn tự gọi reload
+      }}
+    >
       {!loading && children}
     </AuthContext.Provider>
   );
