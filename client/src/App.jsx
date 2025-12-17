@@ -10,6 +10,7 @@ import PlayerBar from "./components/PlayerBar";
 import PlayerBarActive from "./components/PlayerBarActive";
 import RightSidebar from "./components/RightSidebar";
 import ToastContainer from "./components/ToastContainer";
+import CreateRoomModal from "./components/CreateRoomModal"; // Modal tạo phòng
 
 import HomePage from "./pages/client/HomePage";
 import AlbumPage from "./pages/client/AlbumPage";
@@ -24,7 +25,7 @@ import HistoryPage from "./pages/client/HistoryPage";
 import SongPage from "./pages/client/SongPage";
 import AuthSuccess from "./pages/client/AuthSuccess";
 import DonatePage from './pages/client/DonatePage';
-import RoomPage from "./pages/client/RoomPage"; // ✅ Trang Room mới
+import RoomPage from "./pages/client/RoomPage"; // Trang Room
 
 // Admin
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -39,9 +40,7 @@ import AlbumManager from "./pages/admin/AlbumManager";
 import { useAuth } from "./context/AuthContext";
 import { useQueue } from "./context/QueueContext";
 import { useToast } from "./context/ToastContext";
-import { socket } from "./utils/socket"; // ✅ Import Socket
-
-const SCROLL_SELECTOR = ".main-content-scroll";
+import { socket } from "./utils/socket"; 
 
 // =========================================================
 // 1. COMPONENT MOBILE NAVIGATION
@@ -152,7 +151,7 @@ const MyPlaylistsPage = () => {
 };
 
 // =========================================================
-// 3. APP LAYOUT (CHỨA LOGIC PLAYER & SOCKET)
+// 3. APP LAYOUT - NƠI CHỨA LOGIC CHÍNH
 // =========================================================
 function AppLayout() {
   const location = useLocation();
@@ -165,8 +164,9 @@ function AppLayout() {
   const [showMainHeader, setShowMainHeader] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false);
+  const [isRoomModalOpen, setIsRoomModalOpen] = useState(false); // Modal Room
   
-  // Player State
+  // --- PLAYER STATE ---
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlaylist, setCurrentPlaylist] = useState([]);
@@ -179,18 +179,38 @@ function AppLayout() {
   const handleToggleSidebarCollapse = () => setIsSidebarCollapsed((prev) => !prev);
   const handleCloseRightSidebar = () => setIsRightSidebarVisible(false);
 
-  // --------------------------------------------------------
-  // 🔥 SOCKET.IO LISTENER (ĐỒNG BỘ NHẠC)
-  // --------------------------------------------------------
+  // --- LOGIC 1: CHỌN BÀI HÁT (Truyền xuống các trang con) ---
+  const handleSelectSong = useCallback((song, playlist = [], index = 0) => {
+    if (!song) {
+        setIsNoSongModalOpen(true);
+        return;
+    }
+    
+    // Set State Local
+    setCurrentSong(song);
+    setCurrentPlaylist(playlist.length > 0 ? playlist : [song]);
+    setCurrentIndex(index);
+    setIsPlaying(true);
+    
+    if (window.innerWidth >= 768) setIsRightSidebarVisible(true);
+
+    // Gửi Socket nếu đang trong phòng
+    if (location.pathname.includes("/room/")) {
+        const roomId = location.pathname.split("/room/")[1];
+        socket.emit("change_song", { roomId, song });
+    }
+  }, [location]);
+
+  // --- LOGIC 2: LẮNG NGHE SOCKET (Đồng bộ nhạc) ---
   useEffect(() => {
-    // Chỉ lắng nghe khi user đã đăng nhập
     if (!user) return;
 
     const handleReceiveAction = (data) => {
       // data: { action: 'play'|'pause', song: Object }
       if (data.action === 'play') {
-        if (currentSong?.id !== data.song.id) {
-          setCurrentSong(data.song); // Đổi bài nếu khác
+        // Nếu bài hát khác nhau thì đổi bài trước
+        if (currentSong?.id !== data.song.id && currentSong?._id !== data.song._id) {
+          setCurrentSong(data.song);
         }
         setIsPlaying(true);
         addToast(`Host playing: ${data.song.title}`, 'info');
@@ -202,6 +222,7 @@ function AppLayout() {
     const handleSongChange = (data) => {
         setCurrentSong(data.song);
         setIsPlaying(true);
+        addToast(`Changed to: ${data.song.title}`, 'info');
     };
 
     socket.on("receive_action", handleReceiveAction);
@@ -213,49 +234,13 @@ function AppLayout() {
     };
   }, [currentSong, user, addToast]);
 
-
-  // --------------------------------------------------------
-  // PLAYER LOGIC
-  // --------------------------------------------------------
-  const handleSelectSong = (song, playlist = [], index = 0) => {
-    if (!song) return setIsNoSongModalOpen(true);
-    setCurrentSong(song);
-    setCurrentPlaylist(playlist.length > 0 ? playlist : [song]);
-    setCurrentIndex(index);
-    setIsPlaying(true);
-    if (window.innerWidth >= 768) setIsRightSidebarVisible(true);
-
-    // Nếu đang trong phòng, gửi sự kiện đổi bài
-    if (location.pathname.includes("/room/")) {
-        const roomId = location.pathname.split("/room/")[1];
-        socket.emit("change_song", { roomId, song });
-    }
-  };
-
-  // Auto-save history
-  useEffect(() => {
-    const saveHistory = async () => {
-      if (user && currentSong?.id && currentSong.id.length === 24) {
-        try {
-          await fetch(`${BASE_API_URL}/history`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.id || user._id, songId: currentSong.id })
-          });
-        } catch (e) { /* ignore */ }
-      }
-    };
-    const timer = setTimeout(saveHistory, 2000);
-    return () => clearTimeout(timer);
-  }, [currentSong, user, BASE_API_URL]);
-
-  // ✅ SỬA HANDLE PLAY/PAUSE ĐỂ GỬI SOCKET
+  // --- LOGIC 3: PLAY/PAUSE (Gửi socket) ---
   const handlePlayPause = useCallback(() => {
     if (!currentSong) return;
     const newStatus = !isPlaying;
-    setIsPlaying(newStatus);
+    setIsPlaying(newStatus); // Update UI ngay lập tức
 
-    // Gửi socket nếu đang ở trong phòng room
+    // Nếu đang trong phòng, gửi lệnh cho mọi người
     if (location.pathname.includes("/room/")) {
         const roomId = location.pathname.split("/room/")[1];
         socket.emit("sync_action", {
@@ -266,25 +251,21 @@ function AppLayout() {
     }
   }, [currentSong, isPlaying, location]);
 
-  // Logic Next/Prev/Shuffle/Queue (Giữ nguyên)
+  // --- LOGIC 4: NEXT/PREV/SHUFFLE (Giữ nguyên) ---
   const handleNextSong = useCallback(() => {
     if (queue.length > 0 && currentQueueIndex + 1 < queue.length) {
         const nextSong = queue[currentQueueIndex + 1];
-        setCurrentSong(nextSong); setCurrentQueueIndex(prev => prev + 1); setIsPlaying(true);
-        return;
+        setCurrentSong(nextSong); setCurrentQueueIndex(prev => prev + 1); setIsPlaying(true); return;
     }
     if (currentPlaylist.length === 0) return;
-    let nextIndex = isShuffleActive 
-        ? Math.floor(Math.random() * currentPlaylist.length) 
-        : (currentIndex + 1) % currentPlaylist.length;
+    let nextIndex = isShuffleActive ? Math.floor(Math.random() * currentPlaylist.length) : (currentIndex + 1) % currentPlaylist.length;
     setCurrentIndex(nextIndex); setCurrentSong(currentPlaylist[nextIndex]); setIsPlaying(true);
   }, [currentPlaylist, currentIndex, isShuffleActive, queue, currentQueueIndex]);
 
   const handlePrevSong = useCallback(() => {
     if (queue.length > 0 && currentQueueIndex - 1 >= 0) {
         const prevSong = queue[currentQueueIndex - 1];
-        setCurrentSong(prevSong); setCurrentQueueIndex(prev => prev - 1); setIsPlaying(true);
-        return;
+        setCurrentSong(prevSong); setCurrentQueueIndex(prev => prev - 1); setIsPlaying(true); return;
     }
     if (currentPlaylist.length === 0) return;
     const prevIndex = currentIndex === 0 ? currentPlaylist.length - 1 : currentIndex - 1;
@@ -293,35 +274,65 @@ function AppLayout() {
 
   const handleToggleShuffle = useCallback(() => setShuffleActive(prev => !prev), []);
   const handleToggleRepeat = useCallback(() => setRepeatActive(prev => !prev), []);
-  
   const handlePlayFromQueue = useCallback((qIndex) => {
-    if (qIndex >= 0 && qIndex < queue.length) {
-      setCurrentSong(queue[qIndex]); setCurrentQueueIndex(qIndex); setIsPlaying(true);
-    }
+    if (qIndex >= 0 && qIndex < queue.length) { setCurrentSong(queue[qIndex]); setCurrentQueueIndex(qIndex); setIsPlaying(true); }
   }, [queue]);
 
+  // --- LOGIC 5: AUTO SAVE HISTORY ---
+  useEffect(() => {
+    const saveHistory = async () => {
+      if (user && currentSong) {
+        const songId = currentSong.id || currentSong._id;
+        if (songId && songId.length === 24) {
+            try {
+            await fetch(`${BASE_API_URL}/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.id || user._id, songId })
+            });
+            } catch (e) { /* ignore */ }
+        }
+      }
+    };
+    const timer = setTimeout(saveHistory, 2000);
+    return () => clearTimeout(timer);
+  }, [currentSong, user, BASE_API_URL]);
 
-  // --------------------------------------------------------
-  // RENDER
-  // --------------------------------------------------------
+
+  // --- RENDER ---
   if (user?.role === 'admin') return <Navigate to="/admin" replace />;
 
   return (
     <div className="bg-black h-screen flex flex-col">
-      {/* Sliding Header */}
+      {/* Header */}
       <div className={`transition-all duration-500 z-40 overflow-hidden ${showMainHeader ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
         <Header isLoggedIn={isLoggedIn} />
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {isLoggedIn && <div className="hidden md:block h-full"><Sidebar isLoggedIn={isLoggedIn} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebarCollapse}/></div>}
+        {/* Sidebar */}
+        {isLoggedIn && (
+            <div className="hidden md:block h-full">
+                <Sidebar 
+                    isLoggedIn={isLoggedIn} 
+                    isCollapsed={isSidebarCollapsed} 
+                    onToggleCollapse={handleToggleSidebarCollapse} 
+                    onOpenRoom={() => setIsRoomModalOpen(true)} // ✅ Nút mở Modal Room
+                />
+            </div>
+        )}
 
+        {/* Main Content */}
         <main className="flex-1 min-w-0 p-0 md:p-2 md:pr-3 relative">
           <div className="h-full overflow-y-auto bg-black md:bg-neutral-900 md:rounded-lg main-content-scroll pb-32 md:pb-0">
-            <Outlet context={{ setShowMainHeader }} />
+            
+            {/* ✅ QUAN TRỌNG: Truyền hàm phát nhạc xuống các trang con */}
+            <Outlet context={{ setShowMainHeader, handleSelectSong }} />
+          
           </div>
         </main>
 
+        {/* Right Sidebar */}
         {isRightSidebarVisible && (
           <div className="hidden md:block w-[360px] flex-shrink-0 transition-all duration-300 p-2 pl-0 h-full">
             <RightSidebar song={currentSong} onClose={handleCloseRightSidebar} onSongSelect={handleSelectSong} />
@@ -329,12 +340,13 @@ function AppLayout() {
         )}
       </div>
 
+      {/* Player Bar */}
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40">
         {currentSong && (
           <PlayerBarActive
             song={currentSong}
             isPlaying={isPlaying}
-            onPlayPause={handlePlayPause} // ✅ Đã dùng hàm có socket logic
+            onPlayPause={handlePlayPause}
             onNext={handleNextSong}
             onPrev={handlePrevSong}
             isShuffleActive={isShuffleActive}
@@ -348,23 +360,25 @@ function AppLayout() {
         )}
       </div>
 
+      {/* Modals */}
       {isNoSongModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-          <div className="bg-[#282828] rounded-2xl p-8 max-w-md w-full mx-4 border border-neutral-700 shadow-2xl">
+          <div className="bg-[#282828] rounded-2xl p-8 max-w-md border border-neutral-700">
             <h2 className="text-2xl font-bold text-white mb-3">No Song Selected</h2>
-            <p className="text-neutral-300 mb-6">Please select a song to play.</p>
-            <button onClick={() => setIsNoSongModalOpen(false)} className="w-full bg-green-500 hover:bg-green-400 text-black font-bold py-3 rounded-lg transition">Got it</button>
+            <button onClick={() => setIsNoSongModalOpen(false)} className="w-full bg-green-500 text-black font-bold py-3 rounded-lg">Got it</button>
           </div>
         </div>
       )}
 
+      {isRoomModalOpen && <CreateRoomModal onClose={() => setIsRoomModalOpen(false)} />}
+      
       {isLoggedIn && <MobileNav />}
     </div>
   );
 }
 
 // =========================================================
-// 4. ROOT APP
+// 4. APP ROOT
 // =========================================================
 function App() {
   return (
@@ -378,12 +392,9 @@ function App() {
         </Route>
 
         <Route path="/" element={<AppLayout />}>
-          <Route index element={<HomePage />} /> {/* Props passed via context/outlet context if needed, or internally */}
-          <Route path="/album/:id" element={<AlbumPage onSongSelect={(song, pl, i) => document.querySelector('.main-player')?.selectSong(song, pl, i)} />} /> 
-          {/* Note: In `AppLayout`, `onSongSelect` is passed via `useOutletContext` if using context, 
-              OR simpler: pass `handleSelectSong` to `Outlet` context */}
-          
-          <Route path="/search" element={<SearchPage onSongSelect={(song, pl, i) => window.selectSongGlobal(song, pl, i)} />} />
+          <Route index element={<HomePage />} />
+          <Route path="/album/:id" element={<AlbumPage />} />
+          <Route path="/search" element={<SearchPage />} />
           <Route path="/likedSongs" element={<LikedSongs />} />
           <Route path="/playlist/:playlistId" element={<PlaylistPage />} />
           <Route path="/artist/:artistId" element={<ArtistPage />} />
@@ -393,7 +404,7 @@ function App() {
           <Route path="/donate" element={<DonatePage />} />
           <Route path="/playlists" element={<MyPlaylistsPage />} />
           
-          {/* ✅ ROUTE PHÒNG STREAM */}
+          {/* Route Room */}
           <Route path="/room/:roomId" element={<RoomPage />} />
         </Route>
 
