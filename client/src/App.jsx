@@ -312,25 +312,63 @@ function AppLayout() {
   }, [currentSong, isPlaying, location, activeRoomId]);
 
   // --- LOGIC 6: PLAYER CONTROLS ---
-  const handleNextSong = useCallback(() => {
-    if (queue.length > 0 && currentQueueIndex + 1 < queue.length) {
-        const nextSong = queue[currentQueueIndex + 1];
-        setCurrentSong(nextSong); setCurrentQueueIndex(prev => prev + 1); setIsPlaying(true); return;
-    }
-    if (currentPlaylist.length === 0) return;
-    let nextIndex = isShuffleActive ? Math.floor(Math.random() * currentPlaylist.length) : (currentIndex + 1) % currentPlaylist.length;
-    setCurrentIndex(nextIndex); setCurrentSong(currentPlaylist[nextIndex]); setIsPlaying(true);
-  }, [currentPlaylist, currentIndex, isShuffleActive, queue, currentQueueIndex]);
+const handleNextSong = useCallback(() => {
+    let nextSongToPlay = null;
+    let nextIndexToPlay = 0;
 
-  const handlePrevSong = useCallback(() => {
-    if (queue.length > 0 && currentQueueIndex - 1 >= 0) {
-        const prevSong = queue[currentQueueIndex - 1];
-        setCurrentSong(prevSong); setCurrentQueueIndex(prev => prev - 1); setIsPlaying(true); return;
+    // 1. Kiểm tra Queue trước
+    if (queue.length > 0 && currentQueueIndex + 1 < queue.length) {
+        nextSongToPlay = queue[currentQueueIndex + 1];
+        setCurrentQueueIndex(prev => prev + 1);
+    } 
+    // 2. Nếu không có Queue thì lấy trong Playlist hiện tại
+    else if (currentPlaylist.length > 0) {
+        let nextIndex = isShuffleActive 
+            ? Math.floor(Math.random() * currentPlaylist.length) 
+            : (currentIndex + 1) % currentPlaylist.length;
+        
+        nextSongToPlay = currentPlaylist[nextIndex];
+        nextIndexToPlay = nextIndex;
+        setCurrentIndex(nextIndex);
     }
-    if (currentPlaylist.length === 0) return;
-    const prevIndex = currentIndex === 0 ? currentPlaylist.length - 1 : currentIndex - 1;
-    setCurrentIndex(prevIndex); setCurrentSong(currentPlaylist[prevIndex]); setIsPlaying(true);
-  }, [currentPlaylist, currentIndex, queue, currentQueueIndex]);
+
+    // 3. Thực hiện chuyển bài (Local & Socket)
+    if (nextSongToPlay) {
+        setCurrentSong(nextSongToPlay);
+        setIsPlaying(true);
+        const targetRoomId = activeRoomId || (location.pathname.includes("/room/") ? location.pathname.split("/room/")[1] : null);
+        
+        if (targetRoomId) {
+            console.log(`📡 [AUTO-NEXT] Syncing to room ${targetRoomId}: ${nextSongToPlay.title}`);
+            socket.emit("change_song", { roomId: targetRoomId, song: nextSongToPlay });
+        }
+    }
+  }, [currentPlaylist, currentIndex, isShuffleActive, queue, currentQueueIndex, activeRoomId, location]);
+
+const handlePrevSong = useCallback(() => {
+    let prevSongToPlay = null;
+
+    if (queue.length > 0 && currentQueueIndex - 1 >= 0) {
+        prevSongToPlay = queue[currentQueueIndex - 1];
+        setCurrentQueueIndex(prev => prev - 1);
+    } 
+    else if (currentPlaylist.length > 0) {
+        const prevIndex = currentIndex === 0 ? currentPlaylist.length - 1 : currentIndex - 1;
+        prevSongToPlay = currentPlaylist[prevIndex];
+        setCurrentIndex(prevIndex);
+    }
+
+    if (prevSongToPlay) {
+        setCurrentSong(prevSongToPlay);
+        setIsPlaying(true);
+        const targetRoomId = activeRoomId || (location.pathname.includes("/room/") ? location.pathname.split("/room/")[1] : null);
+        
+        if (targetRoomId) {
+            console.log(`📡 [PREV] Syncing to room ${targetRoomId}: ${prevSongToPlay.title}`);
+            socket.emit("change_song", { roomId: targetRoomId, song: prevSongToPlay });
+        }
+    }
+  }, [currentPlaylist, currentIndex, queue, currentQueueIndex, activeRoomId, location]);
 
   const handleToggleShuffle = useCallback(() => setShuffleActive(prev => !prev), []);
   const handleToggleRepeat = useCallback(() => setRepeatActive(prev => !prev), []);
@@ -356,7 +394,13 @@ function AppLayout() {
     const timer = setTimeout(saveHistory, 2000);
     return () => clearTimeout(timer);
   }, [currentSong, user, BASE_API_URL]);
-
+  useEffect(() => {
+    if (currentSong && isPlaying) {
+      document.title = `▶ ${currentSong.title} - ${currentSong.artist}`;
+    } else {
+      document.title = "Music Party"; // Tên mặc định của App bạn
+    }
+  }, [currentSong, isPlaying]);
 
   if (user?.role === 'admin') return <Navigate to="/admin" replace />;
 
@@ -378,7 +422,7 @@ function AppLayout() {
 
         <main className="flex-1 min-w-0 p-0 md:p-2 md:pr-3 relative">
           <div className="h-full overflow-y-auto bg-black md:bg-neutral-900 md:rounded-lg main-content-scroll pb-32 md:pb-0">
-            <Outlet context={{ setShowMainHeader, handleSelectSong, handleLeaveRoom }} />
+            <Outlet context={{ setShowMainHeader, handleSelectSong, handleLeaveRoom, currentSong, isPlaying }} />
           </div>
         </main>
 
