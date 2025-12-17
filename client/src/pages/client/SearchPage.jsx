@@ -1,21 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router-dom";
 
 // Components
-<<<<<<< HEAD
-import CategoryCard from '../../components/CategoryCard';
-import ScrollableSection from '../../components/ScrollableSection';
-import SongCard from '../../components/SongCard';
-import ArtistCard from '../../components/ArtistCard';
-import AlbumCard from '../../components/AlbumCard';
-import { useOutletContext } from 'react-router-dom';
-=======
 import CategoryCard from "../../components/CategoryCard";
 import ScrollableSection from "../../components/ScrollableSection";
 import SongCard from "../../components/SongCard";
 import ArtistCard from "../../components/ArtistCard";
 import AlbumCard from "../../components/AlbumCard";
->>>>>>> 4c580ad9c3117f3b7e40c8e44aeb65adf33ecf43
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -27,18 +18,10 @@ const formatDuration = (seconds) => {
   return `${min}:${sec < 10 ? "0" : ""}${sec}`;
 };
 
-<<<<<<< HEAD
 export default function SearchPage() {
-
-    const { handleSelectSong: onSongSelect } = useOutletContext();
-    const location = useLocation();
-    
-    // Lấy từ khóa từ URL (?q=...)
-    const query = new URLSearchParams(location.search).get('q') || '';
-=======
-export default function SearchPage({ onSongSelect }) {
+  // ✅ FIX: Sử dụng useOutletContext để lấy hàm phát nhạc từ App.jsx
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const location = useLocation();
->>>>>>> 4c580ad9c3117f3b7e40c8e44aeb65adf33ecf43
 
   // Lấy từ khóa từ URL (?q=...)
   const query = new URLSearchParams(location.search).get("q") || "";
@@ -79,6 +62,7 @@ export default function SearchPage({ onSongSelect }) {
   ];
   const cardWidth = "w-[18.5%]";
 
+  // Hàm tìm kiếm ngữ nghĩa (Semantic Search)
   const fetchSemanticSearch = async (searchQuery) => {
     try {
       const response = await fetch(`${BASE_API_URL}/songs/semantic-search`, {
@@ -97,8 +81,7 @@ export default function SearchPage({ onSongSelect }) {
         id: song._id,
         title: song.title,
         artist: song.artist?.name || "Unknown Artist",
-        image:
-          song.cover || "https://placehold.co/150x150/282828/white?text=Song",
+        image: song.cover || "https://placehold.co/150x150/282828/white?text=Song",
         url: song.url,
         duration: formatDuration(song.duration),
         score: song.score,
@@ -109,6 +92,7 @@ export default function SearchPage({ onSongSelect }) {
       setSimilarSongs([]);
     }
   };
+
   // === GỌI API SEARCH ===
   useEffect(() => {
     if (!query) {
@@ -129,15 +113,12 @@ export default function SearchPage({ onSongSelect }) {
       try {
         // Gọi endpoint: /api/search?q=...&type=all
         const response = await fetch(
-          `${BASE_API_URL}/search?q=${encodeURIComponent(
-            query
-          )}&type=all&limit=10`
+          `${BASE_API_URL}/search?q=${encodeURIComponent(query)}&type=all&limit=10`
         );
 
         if (!response.ok) throw new Error("Lỗi tìm kiếm");
 
         const rawData = await response.json();
-        // Cấu trúc Backend: rawData.results.songs.data
         const results = rawData.results || {};
 
         // === MAP DỮ LIỆU ===
@@ -145,35 +126,24 @@ export default function SearchPage({ onSongSelect }) {
           songs: (results.songs?.data || []).map((song) => ({
             id: song._id,
             title: song.title,
-            // Backend populate artist -> trả về object -> lấy .name
             artist: song.artist?.name || "Unknown Artist",
-            // Backend trả về 'cover', Frontend dùng 'image'
-            image:
-              song.cover ||
-              "https://placehold.co/150x150/282828/white?text=Song",
+            image: song.cover || "https://placehold.co/150x150/282828/white?text=Song",
             url: song.url,
             duration: formatDuration(song.duration),
           })),
 
           artists: (results.artists?.data || []).map((artist) => ({
-            // Ưu tiên artist_id Jamendo để link không bị lỗi 404
             id: artist.artist_id || artist._id,
             name: artist.name,
-            image:
-              artist.avatar ||
-              artist.image ||
-              "https://placehold.co/150x150/282828/white?text=Artist",
+            image: artist.avatar || artist.image || "https://placehold.co/150x150/282828/white?text=Artist",
             type: "Artist",
           })),
 
           albums: (results.albums?.data || []).map((album) => ({
             id: album._id,
             title: album.title,
-            // Album cũng populate artist -> lấy .name
             artist: album.artist?.name || "Unknown Artist",
-            image:
-              album.cover ||
-              "https://placehold.co/150x150/282828/white?text=Album",
+            image: album.cover || "https://placehold.co/150x150/282828/white?text=Album",
           })),
         };
 
@@ -188,7 +158,7 @@ export default function SearchPage({ onSongSelect }) {
     };
 
     fetchResults();
-  }, [query]); // Chạy lại khi query thay đổi
+  }, [query]);
 
   // === RENDER ===
 
@@ -272,6 +242,7 @@ export default function SearchPage({ onSongSelect }) {
           ))}
         </ScrollableSection>
       )}
+      
       {/* SIMILAR SONGS (Semantic Search) */}
       {hasSimilarSongs && (
         <ScrollableSection title="Bài hát tương tự" isStatic={true}>
