@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { BrowserRouter, Routes, Route, Outlet, useLocation, Link, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useLocation, Link, Navigate, useNavigate } from "react-router-dom"; // ✅ Thêm useNavigate
 import { GoHome, GoSearch, GoBook } from "react-icons/go";
 import { FaHistory, FaListUl } from "react-icons/fa";
 
@@ -10,7 +10,7 @@ import PlayerBar from "./components/PlayerBar";
 import PlayerBarActive from "./components/PlayerBarActive";
 import RightSidebar from "./components/RightSidebar";
 import ToastContainer from "./components/ToastContainer";
-import CreateRoomModal from "./components/CreateRoomModal"; // Modal tạo phòng
+import CreateRoomModal from "./components/CreateRoomModal";
 
 import HomePage from "./pages/client/HomePage";
 import AlbumPage from "./pages/client/AlbumPage";
@@ -25,7 +25,7 @@ import HistoryPage from "./pages/client/HistoryPage";
 import SongPage from "./pages/client/SongPage";
 import AuthSuccess from "./pages/client/AuthSuccess";
 import DonatePage from './pages/client/DonatePage';
-import RoomPage from "./pages/client/RoomPage"; // Trang Room
+import RoomPage from "./pages/client/RoomPage";
 
 // Admin
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -36,15 +36,11 @@ import UserManager from "./pages/admin/UserManager";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AlbumManager from "./pages/admin/AlbumManager";
 
-// Context & Utils
 import { useAuth } from "./context/AuthContext";
 import { useQueue } from "./context/QueueContext";
 import { useToast } from "./context/ToastContext";
 import { socket } from "./utils/socket"; 
 
-// =========================================================
-// 1. COMPONENT MOBILE NAVIGATION
-// =========================================================
 const MobileNav = () => {
   const location = useLocation();
   const isActive = (path) => location.pathname === path;
@@ -61,9 +57,6 @@ const MobileNav = () => {
   );
 };
 
-// =========================================================
-// 2. COMPONENT MY PLAYLISTS PAGE
-// =========================================================
 const MyPlaylistsPage = () => {
   const { user } = useAuth();
   const { addToast } = useToast();
@@ -151,10 +144,11 @@ const MyPlaylistsPage = () => {
 };
 
 // =========================================================
-// 3. APP LAYOUT - NƠI CHỨA LOGIC CHÍNH
+// 3. APP LAYOUT
 // =========================================================
 function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate(); // ✅ Dùng để điều hướng khi Leave Room
   const { user } = useAuth();
   const { addToast } = useToast();
   const isLoggedIn = !!user;
@@ -164,9 +158,12 @@ function AppLayout() {
   const [showMainHeader, setShowMainHeader] = useState(true);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightSidebarVisible, setIsRightSidebarVisible] = useState(false);
-  const [isRoomModalOpen, setIsRoomModalOpen] = useState(false); // Modal Room
+  const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
   
-  // --- PLAYER STATE ---
+  // ✅ STATE MỚI: LƯU MÃ PHÒNG ĐANG THAM GIA
+  const [activeRoomId, setActiveRoomId] = useState(null);
+
+  // Player State
   const [currentSong, setCurrentSong] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPlaylist, setCurrentPlaylist] = useState([]);
@@ -179,36 +176,61 @@ function AppLayout() {
   const handleToggleSidebarCollapse = () => setIsSidebarCollapsed((prev) => !prev);
   const handleCloseRightSidebar = () => setIsRightSidebarVisible(false);
 
-  // --- LOGIC 1: CHỌN BÀI HÁT (Truyền xuống các trang con) ---
-  const handleSelectSong = useCallback((song, playlist = [], index = 0) => {
-    if (!song) {
-        setIsNoSongModalOpen(true);
-        return;
+  // --- LOGIC 0: TỰ ĐỘNG BẮT ACTIVE ROOM ID TỪ URL ---
+  useEffect(() => {
+    if (location.pathname.includes("/room/")) {
+      const roomId = location.pathname.split("/room/")[1];
+      setActiveRoomId(roomId); // Lưu lại phòng đang ở
     }
+  }, [location]);
+
+  // --- LOGIC 1: XỬ LÝ KHI BẤM NÚT "STREAM PARTY" ---
+  const handleOpenStreamParty = () => {
+    if (activeRoomId) {
+      // Nếu đang có phòng -> Bay thẳng vào phòng cũ
+      navigate(`/room/${activeRoomId}`);
+    } else {
+      // Nếu chưa có -> Mở Modal tạo mới
+      setIsRoomModalOpen(true);
+    }
+  };
+
+  // --- LOGIC 2: RỜI PHÒNG (Sẽ truyền xuống RoomPage) ---
+  const handleLeaveRoom = () => {
+    if (activeRoomId) {
+        socket.emit("leave_room", activeRoomId); // Gửi tin hiệu cho Server (nếu cần)
+        setActiveRoomId(null); // Xóa state
+        addToast("Đã rời phòng Stream", "info");
+        navigate("/"); // Quay về trang chủ
+    }
+  };
+
+  // --- LOGIC 3: CHỌN BÀI HÁT ---
+  const handleSelectSong = useCallback((song, playlist = [], index = 0) => {
+    if (!song) return setIsNoSongModalOpen(true);
     
-    // Set State Local
+    console.log("▶ Playing:", song.title); 
     setCurrentSong(song);
     setCurrentPlaylist(playlist.length > 0 ? playlist : [song]);
     setCurrentIndex(index);
     setIsPlaying(true);
-    
     if (window.innerWidth >= 768) setIsRightSidebarVisible(true);
 
-    // Gửi Socket nếu đang trong phòng
-    if (location.pathname.includes("/room/")) {
-        const roomId = location.pathname.split("/room/")[1];
-        socket.emit("change_song", { roomId, song });
-    }
-  }, [location]);
+    // Ưu tiên activeRoomId đã lưu
+    const targetRoomId = activeRoomId || (location.pathname.includes("/room/") ? location.pathname.split("/room/")[1] : null);
 
-  // --- LOGIC 2: LẮNG NGHE SOCKET (Đồng bộ nhạc) ---
+    if (targetRoomId) {
+        console.log(`📡 Sending change_song to room: ${targetRoomId}`);
+        socket.emit("change_song", { roomId: targetRoomId, song });
+    }
+  }, [activeRoomId, location]);
+
+  // --- LOGIC 4: LẮNG NGHE SOCKET ---
   useEffect(() => {
     if (!user) return;
 
     const handleReceiveAction = (data) => {
-      // data: { action: 'play'|'pause', song: Object }
       if (data.action === 'play') {
-        // Nếu bài hát khác nhau thì đổi bài trước
         if (currentSong?.id !== data.song.id && currentSong?._id !== data.song._id) {
           setCurrentSong(data.song);
         }
@@ -234,24 +256,24 @@ function AppLayout() {
     };
   }, [currentSong, user, addToast]);
 
-  // --- LOGIC 3: PLAY/PAUSE (Gửi socket) ---
+  // --- LOGIC 5: PLAY/PAUSE ---
   const handlePlayPause = useCallback(() => {
     if (!currentSong) return;
     const newStatus = !isPlaying;
-    setIsPlaying(newStatus); // Update UI ngay lập tức
+    setIsPlaying(newStatus); 
 
-    // Nếu đang trong phòng, gửi lệnh cho mọi người
-    if (location.pathname.includes("/room/")) {
-        const roomId = location.pathname.split("/room/")[1];
+    const targetRoomId = activeRoomId || (location.pathname.includes("/room/") ? location.pathname.split("/room/")[1] : null);
+
+    if (targetRoomId) {
         socket.emit("sync_action", {
-            roomId,
+            roomId: targetRoomId,
             action: newStatus ? 'play' : 'pause',
             song: currentSong
         });
     }
-  }, [currentSong, isPlaying, location]);
+  }, [currentSong, isPlaying, location, activeRoomId]);
 
-  // --- LOGIC 4: NEXT/PREV/SHUFFLE (Giữ nguyên) ---
+  // --- LOGIC 6: PLAYER CONTROLS (NEXT/PREV...) ---
   const handleNextSong = useCallback(() => {
     if (queue.length > 0 && currentQueueIndex + 1 < queue.length) {
         const nextSong = queue[currentQueueIndex + 1];
@@ -278,7 +300,6 @@ function AppLayout() {
     if (qIndex >= 0 && qIndex < queue.length) { setCurrentSong(queue[qIndex]); setCurrentQueueIndex(qIndex); setIsPlaying(true); }
   }, [queue]);
 
-  // --- LOGIC 5: AUTO SAVE HISTORY ---
   useEffect(() => {
     const saveHistory = async () => {
       if (user && currentSong) {
@@ -299,82 +320,52 @@ function AppLayout() {
   }, [currentSong, user, BASE_API_URL]);
 
 
-  // --- RENDER ---
   if (user?.role === 'admin') return <Navigate to="/admin" replace />;
 
   return (
     <div className="bg-black h-screen flex flex-col">
-      {/* Header */}
-      <div 
-  className={`transition-all duration-500 z-40 ease-in-out ${
-    showMainHeader 
-      ? 'max-h-20 opacity-100 translate-y-0 overflow-visible' // ✅ Hiện: Cho phép tràn viền (để hiện dropdown)
-      : 'max-h-0 opacity-0 -translate-y-full overflow-hidden' // ❌ Ẩn: Cắt hết để ẩn đi
-  }`}
->
-  <Header isLoggedIn={isLoggedIn} />
-</div>
+      <div className={`transition-all duration-500 z-40 ease-in-out ${showMainHeader ? 'max-h-20 opacity-100 translate-y-0 overflow-visible' : 'max-h-0 opacity-0 -translate-y-full overflow-hidden'}`}>
+        <Header isLoggedIn={isLoggedIn} />
+      </div>
 
       <div className="flex-1 flex overflow-hidden relative">
-        {/* Sidebar */}
-        {isLoggedIn && (
-            <div className="hidden md:block h-full">
-                <Sidebar 
-                    isLoggedIn={isLoggedIn} 
-                    isCollapsed={isSidebarCollapsed} 
-                    onToggleCollapse={handleToggleSidebarCollapse} 
-                    onOpenRoom={() => setIsRoomModalOpen(true)} // ✅ Nút mở Modal Room
-                />
-            </div>
-        )}
+        {isLoggedIn && <div className="hidden md:block h-full">
+            <Sidebar 
+                isLoggedIn={isLoggedIn} 
+                isCollapsed={isSidebarCollapsed} 
+                onToggleCollapse={handleToggleSidebarCollapse} 
+                onOpenRoom={handleOpenStreamParty} // ✅ Dùng hàm thông minh mới
+            />
+        </div>}
 
-        {/* Main Content */}
         <main className="flex-1 min-w-0 p-0 md:p-2 md:pr-3 relative">
           <div className="h-full overflow-y-auto bg-black md:bg-neutral-900 md:rounded-lg main-content-scroll pb-32 md:pb-0">
-            
-            {/* ✅ QUAN TRỌNG: Truyền hàm phát nhạc xuống các trang con */}
-            <Outlet context={{ setShowMainHeader, handleSelectSong }} />
-          
+            {/* ✅ Truyền thêm handleLeaveRoom xuống dưới */}
+            <Outlet context={{ setShowMainHeader, handleSelectSong, handleLeaveRoom }} />
           </div>
         </main>
 
-        {/* Right Sidebar */}
-        {isRightSidebarVisible && (
-          <div className="hidden md:block w-[360px] flex-shrink-0 transition-all duration-300 p-2 pl-0 h-full">
+        {isRightSidebarVisible && <div className="hidden md:block w-[360px] flex-shrink-0 transition-all duration-300 p-2 pl-0 h-full">
             <RightSidebar song={currentSong} onClose={handleCloseRightSidebar} onSongSelect={handleSelectSong} />
-          </div>
-        )}
+        </div>}
       </div>
 
-      {/* Player Bar */}
       <div className="fixed bottom-16 md:bottom-0 left-0 right-0 z-40">
-        {currentSong && (
-          <PlayerBarActive
-            song={currentSong}
-            isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-            onNext={handleNextSong}
-            onPrev={handlePrevSong}
-            isShuffleActive={isShuffleActive}
-            onToggleShuffle={handleToggleShuffle}
-            isRepeatActive={isRepeatActive}
-            onToggleRepeat={handleToggleRepeat}
-            queue={queue}
-            queueCount={getQueueCount()}
-            onPlayFromQueue={handlePlayFromQueue}
-          />
-        )}
+        {currentSong && <PlayerBarActive 
+            song={currentSong} isPlaying={isPlaying} onPlayPause={handlePlayPause} 
+            onNext={handleNextSong} onPrev={handlePrevSong} isShuffleActive={isShuffleActive} 
+            onToggleShuffle={handleToggleShuffle} isRepeatActive={isRepeatActive} 
+            onToggleRepeat={handleToggleRepeat} queue={queue} queueCount={getQueueCount()} 
+            onPlayFromQueue={handlePlayFromQueue} 
+        />}
       </div>
 
-      {/* Modals */}
-      {isNoSongModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+      {isNoSongModalOpen && <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-[#282828] rounded-2xl p-8 max-w-md border border-neutral-700">
             <h2 className="text-2xl font-bold text-white mb-3">No Song Selected</h2>
             <button onClick={() => setIsNoSongModalOpen(false)} className="w-full bg-green-500 text-black font-bold py-3 rounded-lg">Got it</button>
           </div>
-        </div>
-      )}
+      </div>}
 
       {isRoomModalOpen && <CreateRoomModal onClose={() => setIsRoomModalOpen(false)} />}
       
@@ -383,9 +374,6 @@ function AppLayout() {
   );
 }
 
-// =========================================================
-// 4. APP ROOT
-// =========================================================
 function App() {
   return (
     <BrowserRouter>
@@ -409,8 +397,6 @@ function App() {
           <Route path="/song/:songId" element={<SongPage />} />
           <Route path="/donate" element={<DonatePage />} />
           <Route path="/playlists" element={<MyPlaylistsPage />} />
-          
-          {/* Route Room */}
           <Route path="/room/:roomId" element={<RoomPage />} />
         </Route>
 

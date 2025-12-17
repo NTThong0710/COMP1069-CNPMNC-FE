@@ -22,10 +22,7 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
         const currentId = song.id || song._id;
         
         const isSongLiked = user.likedSongs?.some((item) => {
-            if (typeof item === "string") {
-                return item === currentId;
-            }
-            // Check cả 2 loại ID
+            if (typeof item === "string") return item === currentId;
             return (
                 item._id?.toString() === currentId.toString() || 
                 item.spotifyId?.toString() === currentId.toString()
@@ -36,24 +33,23 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
     } else {
         setIsLiked(false);
     }
-}, [song, user]);
+  }, [song, user]);
 
+  // ✅ LOGIC CLICK OUTSIDE
   useEffect(() => {
     const handleClickOutside = (e) => {
-      // Không đóng tooltip nếu click vào modal
-      const modal = document.querySelector('[class*="AddToPlaylistModal"]');
-      if (modal && modal.contains(e.target)) {
-        return;
-      }
+      if (showPlaylistModal) return;
+      if (tooltipRef.current && tooltipRef.current.contains(e.target)) return;
+      if (e.target.closest('.add-playlist-modal-content') || e.target.closest('.modal-content')) return;
       
-      if (tooltipRef.current && !tooltipRef.current.contains(e.target)) {
-        onClose();
-      }
+      onClose();
     };
+
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose]);
+  }, [onClose, showPlaylistModal]); 
 
+  // ✅ THÊM QUEUE -> ĐÓNG TOOLTIP
   const handleAddToQueue = (e) => {
     e.stopPropagation();
     const result = addToQueue(song);
@@ -62,9 +58,10 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
     } else {
       addToast(`"${song.title}" is already in queue`, "warning", 2000);
     }
+    onClose(); // 👈 Thêm dòng này để đóng tooltip
   };
 
-  // --- SỬA LẠI HÀM NÀY ĐỂ KHỚP ROUTE /me ---
+  // THÊM PLAYLIST -> KHÔNG ĐÓNG (Vì phải mở Modal)
   const handleAddToPlaylist = async (e) => {
     e.stopPropagation();
     
@@ -75,9 +72,6 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
 
     try {
       const token = localStorage.getItem("accessToken");
-      
-      // ✅ SỬA URL: Dùng /playlists/me thay vì /users/:id/playlists
-      // Backend sẽ tự biết user là ai dựa vào token (middleware protect)
       const res = await fetch(`${import.meta.env.VITE_API_URL}/playlists/me`, {
         method: "GET",
         headers: {
@@ -88,12 +82,9 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
 
       if (res.ok) {
         const data = await res.json();
-        console.log("User Playlists:", data);
-        // Backend trả về { success: true, count: ..., playlists: [] }
         setUserPlaylists(data.playlists || []); 
         setShowPlaylistModal(true);
       } else {
-        // Nếu lỗi 401/403 nghĩa là token hết hạn hoặc chưa đăng nhập
         if (res.status === 401) {
             addToast("Phiên đăng nhập hết hạn", "error", 2000);
         } else {
@@ -104,14 +95,18 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
       console.error("Lỗi fetch playlist:", error);
       addToast("Lỗi kết nối server", "error", 2000);
     }
+    // Không gọi onClose() ở đây để giữ Tooltip hiện cho đến khi Modal đóng
   };
 
+  // ✅ LIKE/UNLIKE -> KHÔNG ĐÓNG (Để người dùng thấy tim đổi màu)
+  // (Hoặc nếu bạn muốn đóng thì thêm onClose() vào cuối)
   const handleToggleLike = async (e) => {
     e.stopPropagation();
     if (!user) return alert("Vui lòng đăng nhập để thích bài hát!");
     
     const newStatus = !isLiked;
-    setIsLiked(newStatus);
+    setIsLiked(newStatus); // Update UI ngay lập tức
+    
     try {
       const token = localStorage.getItem("accessToken");
       const songId = song.id || song._id;
@@ -128,56 +123,46 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
         updateUser(updatedUser);
         triggerRefreshLikedSongs();
       } else {
-        setIsLiked(!newStatus);
+        setIsLiked(!newStatus); // Revert nếu lỗi
       }
     } catch (error) {
       console.error("Like toggle failed:", error);
       setIsLiked(!newStatus);
     }
+    // onClose(); // 👈 Uncomment dòng này nếu muốn đóng luôn sau khi Like
   };
 
   const handlePlaySong = (e) => {
     e.stopPropagation();
     if (onPlaySong) {
       onPlaySong();
-      onClose();
+      onClose(); // Đã có sẵn
     }
   };
 
-const getTooltipPosition = () => {
-  const tooltipWidth = 320; 
-  const tooltipHeight = 350; 
-  
-  // FIX: Dùng position.x/y trực tiếp (đã là pageX/pageY từ SongCard)
-  let x = position.x;
-  let y = position.y;
+  const getTooltipPosition = () => {
+    const tooltipWidth = 320; 
+    const tooltipHeight = 350; 
+    let x = position.x;
+    let y = position.y;
+    const viewportWidth = window.innerWidth + window.scrollX;
+    const viewportHeight = window.innerHeight + window.scrollY;
 
-  // Kiểm tra tràn viewport
-  const viewportWidth = window.innerWidth + window.scrollX;
-  const viewportHeight = window.innerHeight + window.scrollY;
+    if (x + tooltipWidth > viewportWidth) x = x - tooltipWidth - 10;
+    if (y + tooltipHeight > viewportHeight) y = y - tooltipHeight - 10;
 
-  // Điều chỉnh nếu tràn phải
-  if (x + tooltipWidth > viewportWidth) {
-    x = x - tooltipWidth - 10;
-  }
-
-  // Điều chỉnh nếu tràn dưới
-  if (y + tooltipHeight > viewportHeight) {
-    y = y - tooltipHeight - 10;
-  }
-
-  return { left: `${x}px`, top: `${y}px` };
-};
+    return { left: `${x}px`, top: `${y}px` };
+  };
 
   const tooltipPosition = getTooltipPosition();
 
   return (
     <>
       <div
-  ref={tooltipRef}
-  className="absolute bg-[#282828] rounded-2xl shadow-2xl z-[9999] overflow-hidden border border-neutral-700 w-80 animate-in fade-in zoom-in-95 duration-200"
-  style={tooltipPosition}
->
+        ref={tooltipRef}
+        className="absolute bg-[#282828] rounded-2xl shadow-2xl z-[9999] overflow-hidden border border-neutral-700 w-80 animate-in fade-in zoom-in-95 duration-200"
+        style={tooltipPosition}
+      >
         <div className="relative group">
           <img
             src={song.image || song.albumImage || "/placeholder.jpg"}
@@ -242,7 +227,7 @@ const getTooltipPosition = () => {
           userPlaylists={userPlaylists}
           onClose={() => {
             setShowPlaylistModal(false);
-            onClose(); // Đóng tooltip sau khi modal đóng
+            onClose(); // ✅ Đóng tooltip sau khi xong việc với Modal
           }}
         />
       )}
