@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { FaPlay, FaRegClock, FaPen, FaTimes, FaTrash } from "react-icons/fa";
 import { Music } from "lucide-react";
-// 1. IMPORT THƯ VIỆN TOAST
 import toast, { Toaster } from "react-hot-toast";
 import { useAuth } from "../../context/AuthContext";
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -34,7 +34,8 @@ const formatDateAdded = (dateString) => {
   }).format(date);
 };
 
-export default function PlaylistPage({ onSongSelect }) {
+export default function PlaylistPage() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { playlistId } = useParams();
 
   const [playlist, setPlaylist] = useState(null);

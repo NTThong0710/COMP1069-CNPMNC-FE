@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FaRegClock, FaPlay, FaTrash } from "react-icons/fa";
 import { History } from "lucide-react"; 
 import { useAuth } from "../../context/AuthContext"; 
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -20,7 +21,8 @@ const formatDate = (dateString) => {
     });
 };
 
-export default function HistoryPage({ onSongSelect }) {
+export default function HistoryPage() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { user } = useAuth(); 
   const [historyList, setHistoryList] = useState([]);
   const [loading, setLoading] = useState(true);

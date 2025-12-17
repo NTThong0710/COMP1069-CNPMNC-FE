@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FaMusic, FaPodcast } from "react-icons/fa";
 import { BsMusicNoteList } from "react-icons/bs";
+import { useOutletContext } from 'react-router-dom';
 
 import ArtistCard from "../../components/ArtistCard";
 import SongCard from "../../components/SongCard";
@@ -29,7 +30,8 @@ const getGreeting = () => {
   return "Chào buổi tối";
 };
 
-export default function HomePage({ onSongSelect }) {
+export default function HomePage() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { user } = useAuth();
   const isLoggedIn = !!user;
   const navigate = useNavigate();

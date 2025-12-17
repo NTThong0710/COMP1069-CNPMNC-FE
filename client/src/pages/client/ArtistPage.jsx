@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { FaPlay } from 'react-icons/fa';
 import { BadgeCheck, MoreHorizontal } from 'lucide-react';
 import AlbumCard from '../../components/AlbumCard';
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -16,7 +17,8 @@ const formatDuration = (seconds) => {
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 };
 
-export default function ArtistPage({ onSongSelect }) {
+export default function ArtistPage() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { artistId } = useParams();
   const navigate = useNavigate();
   

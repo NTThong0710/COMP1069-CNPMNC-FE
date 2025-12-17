@@ -4,6 +4,7 @@ import { FaPlay, FaRegClock, FaCalendarAlt } from "react-icons/fa";
 import { Disc } from "lucide-react";
 // Import SongTooltip (đã có sẵn modal AddToPlaylist bên trong nó)
 import SongTooltip from "../../components/SongTooltip"; 
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -15,7 +16,8 @@ const formatDuration = (seconds) => {
   return `${min}:${sec < 10 ? "0" : ""}${sec}`;
 };
 
-export default function AlbumPage({ onSongSelect }) {
+export default function AlbumPage() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { id } = useParams();
   
   const [album, setAlbum] = useState(null);

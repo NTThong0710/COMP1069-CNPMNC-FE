@@ -3,6 +3,7 @@ import { Play, Shuffle, Download } from "lucide-react";
 import { FaRegClock, FaPlay } from "react-icons/fa";
 import { useAuth } from "../../context/AuthContext";
 import SongTooltip from "../../components/SongTooltip"; 
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,7 +19,8 @@ const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-GB");
 };
 
-export default function LikedSongs({ onSongSelect }) {
+export default function LikedSongs() {
+  const { handleSelectSong: onSongSelect } = useOutletContext();
   const { user, likedSongsTrigger } = useAuth();
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);

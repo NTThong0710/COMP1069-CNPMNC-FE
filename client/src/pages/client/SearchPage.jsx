@@ -7,6 +7,7 @@ import ScrollableSection from '../../components/ScrollableSection';
 import SongCard from '../../components/SongCard';
 import ArtistCard from '../../components/ArtistCard';
 import AlbumCard from '../../components/AlbumCard';
+import { useOutletContext } from 'react-router-dom';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
@@ -18,7 +19,9 @@ const formatDuration = (seconds) => {
     return `${min}:${sec < 10 ? '0' : ''}${sec}`;
 };
 
-export default function SearchPage({ onSongSelect }) {
+export default function SearchPage() {
+
+    const { handleSelectSong: onSongSelect } = useOutletContext();
     const location = useLocation();
     
     // Lấy từ khóa từ URL (?q=...)
