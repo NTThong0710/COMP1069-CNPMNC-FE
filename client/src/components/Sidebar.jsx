@@ -3,7 +3,7 @@ import { GoBook, GoHistory } from "react-icons/go";
 // Import đầy đủ các icon cần dùng
 import { FiPlus, FiTrash2, FiEdit2 } from "react-icons/fi";
 import { PiArrowLineLeft } from "react-icons/pi";
-import { Heart, Music } from "lucide-react";
+import { Heart, Music, Radio } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import LoginTooltip from "./LoginTooltip";
 import { useAuth } from "../context/AuthContext";
@@ -53,7 +53,7 @@ function PlaylistItem({ id, icon, title, subtitle, isCollapsed, onContextMenu, i
 }
 
 // --- COMPONENT CHÍNH: SIDEBAR ---
-export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
+export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onOpenRoom }) {
   const { user, likedSongsTrigger, playlistUpdateTrigger, triggerPlaylistRefresh } = useAuth();
   const { addToast } = useToast();
   const location = useLocation();
@@ -314,6 +314,22 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse }) {
                 onContextMenu={handleContextMenu} // Gắn sự kiện chuột phải
               />
             ))}
+            <div 
+               className={`group mt-4 flex items-center justify-between rounded-md transition-colors cursor-pointer hover:bg-[#1A1A1A] text-neutral-400 hover:text-white ${isCollapsed ? "justify-center px-0" : "px-2"}`}
+               onClick={onOpenRoom} // 👈 Gọi prop từ cha
+            >
+               <div className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
+                  <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-sm group-hover:brightness-110 transition">
+                     <Radio size={24} />
+                  </div>
+                  {!isCollapsed && (
+                     <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate text-white">Stream Party</p>
+                        <p className="text-xs mt-1 opacity-70 truncate">Listen together</p>
+                     </div>
+                  )}
+               </div>
+            </div>
           </div>
         ) : (
           <div className={`overflow-hidden transition-all duration-300 ${isCollapsed ? "opacity-0 max-h-0" : "opacity-100"}`}>
