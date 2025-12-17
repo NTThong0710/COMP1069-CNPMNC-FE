@@ -305,9 +305,15 @@ function AppLayout() {
   return (
     <div className="bg-black h-screen flex flex-col">
       {/* Header */}
-      <div className={`transition-all duration-500 z-40 overflow-hidden ${showMainHeader ? 'max-h-20 opacity-100' : 'max-h-0 opacity-0'}`}>
-        <Header isLoggedIn={isLoggedIn} />
-      </div>
+      <div 
+  className={`transition-all duration-500 z-40 ease-in-out ${
+    showMainHeader 
+      ? 'max-h-20 opacity-100 translate-y-0 overflow-visible' // ✅ Hiện: Cho phép tràn viền (để hiện dropdown)
+      : 'max-h-0 opacity-0 -translate-y-full overflow-hidden' // ❌ Ẩn: Cắt hết để ẩn đi
+  }`}
+>
+  <Header isLoggedIn={isLoggedIn} />
+</div>
 
       <div className="flex-1 flex overflow-hidden relative">
         {/* Sidebar */}
