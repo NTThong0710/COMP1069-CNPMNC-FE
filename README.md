@@ -24,6 +24,17 @@ Music8 is a modern, responsive, and feature-rich music streaming application des
 
 <br>
 
+## 🎥 Video Demo
+
+Watch a quick tour of the application features:
+
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/eee5bfb9-4bb4-4071-9717-fe8c69a71fcf" controls="controls" width="800" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+  </video>
+</div>
+
+<br>
+
 ## ✨ Features
 
 - **Seamless Music Streaming:** High-quality audio playback with a custom player.
