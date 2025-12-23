@@ -105,7 +105,7 @@ npm run dev
 ```
 ### Phase 2: Start Backend
 ```bash
-cd backend
+cd backend/COMP1069-CNPMNC-BE
 docker-compose up --build
 # Server running on port 5000
 ```
