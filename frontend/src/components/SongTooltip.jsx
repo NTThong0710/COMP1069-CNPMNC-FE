@@ -1,16 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { FaPlay, FaPlus, FaHeart, FaRegHeart } from "react-icons/fa";
 import { Plus } from "lucide-react";
-import { useQueue } from "../context/QueueContext";
+import { useDispatch } from 'react-redux';
+import { addToQueue as addToQueueAction } from '../redux/slices/playerSlice';
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
 import AddToPlaylistModal from "./AddToPlaylistModal";
 
 function SongTooltip({ song, position, onClose, onPlaySong }) {
-  const { addToQueue } = useQueue();
+  const dispatch = useDispatch();
+  const addToQueue = (song) => {
+    dispatch(addToQueueAction(song));
+    return { success: true };
+  };
   const { user, updateUser, triggerRefreshLikedSongs } = useAuth();
   const { addToast } = useToast();
-  
+
   const tooltipRef = useRef(null);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
@@ -19,19 +24,19 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
   // Check Like status
   useEffect(() => {
     if (user && song) {
-        const currentId = song.id || song._id;
-        
-        const isSongLiked = user.likedSongs?.some((item) => {
-            if (typeof item === "string") return item === currentId;
-            return (
-                item._id?.toString() === currentId.toString() || 
-                item.spotifyId?.toString() === currentId.toString()
-            );
-        });
-        
-        setIsLiked(!!isSongLiked);
+      const currentId = song.id || song._id;
+
+      const isSongLiked = user.likedSongs?.some((item) => {
+        if (typeof item === "string") return item === currentId;
+        return (
+          item._id?.toString() === currentId.toString() ||
+          item.spotifyId?.toString() === currentId.toString()
+        );
+      });
+
+      setIsLiked(!!isSongLiked);
     } else {
-        setIsLiked(false);
+      setIsLiked(false);
     }
   }, [song, user]);
 
@@ -41,13 +46,13 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
       if (showPlaylistModal) return;
       if (tooltipRef.current && tooltipRef.current.contains(e.target)) return;
       if (e.target.closest('.add-playlist-modal-content') || e.target.closest('.modal-content')) return;
-      
+
       onClose();
     };
 
     window.addEventListener("mousedown", handleClickOutside);
     return () => window.removeEventListener("mousedown", handleClickOutside);
-  }, [onClose, showPlaylistModal]); 
+  }, [onClose, showPlaylistModal]);
 
   // ✅ THÊM QUEUE -> ĐÓNG TOOLTIP
   const handleAddToQueue = (e) => {
@@ -64,7 +69,7 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
   // THÊM PLAYLIST -> KHÔNG ĐÓNG (Vì phải mở Modal)
   const handleAddToPlaylist = async (e) => {
     e.stopPropagation();
-    
+
     if (!user) {
       alert("Vui lòng đăng nhập để thêm vào playlist!");
       return;
@@ -82,13 +87,13 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
 
       if (res.ok) {
         const data = await res.json();
-        setUserPlaylists(data.playlists || []); 
+        setUserPlaylists(data.playlists || []);
         setShowPlaylistModal(true);
       } else {
         if (res.status === 401) {
-            addToast("Phiên đăng nhập hết hạn", "error", 2000);
+          addToast("Phiên đăng nhập hết hạn", "error", 2000);
         } else {
-            addToast("Không thể tải danh sách playlist", "error", 2000);
+          addToast("Không thể tải danh sách playlist", "error", 2000);
         }
       }
     } catch (error) {
@@ -103,10 +108,10 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
   const handleToggleLike = async (e) => {
     e.stopPropagation();
     if (!user) return alert("Vui lòng đăng nhập để thích bài hát!");
-    
+
     const newStatus = !isLiked;
     setIsLiked(newStatus); // Update UI ngay lập tức
-    
+
     try {
       const token = localStorage.getItem("accessToken");
       const songId = song.id || song._id;
@@ -141,8 +146,8 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
   };
 
   const getTooltipPosition = () => {
-    const tooltipWidth = 320; 
-    const tooltipHeight = 350; 
+    const tooltipWidth = 320;
+    const tooltipHeight = 350;
     let x = position.x;
     let y = position.y;
     const viewportWidth = window.innerWidth + window.scrollX;
@@ -208,11 +213,10 @@ function SongTooltip({ song, position, onClose, onPlaySong }) {
             <button
               onClick={handleToggleLike}
               title={isLiked ? "Unlike" : "Like"}
-              className={`w-10 h-10 flex items-center justify-center rounded-lg transition ${
-                isLiked
+              className={`w-10 h-10 flex items-center justify-center rounded-lg transition ${isLiked
                   ? "bg-green-500 text-black hover:bg-green-400"
                   : "bg-neutral-700 text-white hover:bg-neutral-600"
-              }`}
+                }`}
             >
               {isLiked ? <FaHeart size={16} /> : <FaRegHeart size={16} />}
             </button>

@@ -6,14 +6,8 @@ const BASE_API_URL = import.meta.env.VITE_API_URL;
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [likedSongsTrigger, setLikedSongsTrigger] = useState(0);
-  // 1. STATE TRIGGER (Để báo hiệu cập nhật Playlist)
-  const [playlistUpdateTrigger, setPlaylistUpdateTrigger] = useState(0);
 
-  // Trong AuthContext.jsx
-  const triggerPlaylistRefresh = () => {
-    setPlaylistUpdateTrigger((prev) => prev + 1);
-  };
+  // === HÀM HELPER: GỌI API LẤY INFO MỚI NHẤT ===
   // === HÀM HELPER: GỌI API LẤY INFO MỚI NHẤT ===
   // Hàm này giúp đồng bộ dữ liệu từ Server về Client bất cứ lúc nào
   const fetchUserProfile = async (accessToken) => {
@@ -130,9 +124,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(userData));
   };
 
-  const triggerRefreshLikedSongs = () => {
-    setLikedSongsTrigger((prev) => prev + 1);
-  };
+
 
   return (
     <AuthContext.Provider
@@ -142,12 +134,8 @@ export const AuthProvider = ({ children }) => {
         register,
         logout,
         loading,
-        likedSongsTrigger,
-        triggerRefreshLikedSongs,
         updateUser,
-        playlistUpdateTrigger,
-        triggerPlaylistRefresh,
-        fetchUserProfile, // Xuất thêm hàm này nếu component con muốn tự gọi reload
+        fetchUserProfile, // Utility if needed for login/register, but components should use useUserProfile hook
       }}
     >
       {!loading && children}

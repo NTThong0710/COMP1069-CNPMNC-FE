@@ -7,7 +7,8 @@ import { Link, useLocation } from "react-router-dom";
 import LoginTooltip from "./LoginTooltip";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-
+import { useUserProfile } from "../hooks/useUserProfile";
+import { useCreatePlaylist, useDeletePlaylist } from "../hooks/usePlaylists";
 const BASE_API_URL = import.meta.env.VITE_API_URL;
 
 // --- COMPONENT CON: TỪNG DÒNG PLAYLIST ---
@@ -49,11 +50,19 @@ function PlaylistItem({ id, icon, title, subtitle, isCollapsed, onContextMenu, i
 
 // --- COMPONENT CHÍNH: SIDEBAR ---
 export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onOpenRoom }) {
-  const { user, likedSongsTrigger, playlistUpdateTrigger, triggerPlaylistRefresh } = useAuth();
+  const { user } = useAuth();
   const { addToast } = useToast();
   const location = useLocation();
 
-  const [stats, setStats] = useState({ likedCount: 0, playlists: [] });
+  // TanStack Query
+  const { data: userProfile } = useUserProfile();
+
+  // Use profile data from query, default to empty
+  const stats = {
+    likedCount: userProfile?.likedSongs?.length || 0,
+    playlists: userProfile?.playlists || [],
+  };
+
   const [isTooltipOpen, setIsTooltipOpen] = useState(false);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
 
@@ -61,27 +70,6 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, playlistId: null, playlistName: "" });
 
   const createPlaylistRef = useRef(null);
-
-  useEffect(() => {
-    const fetchLatestUserData = async () => {
-      if (!user) return;
-      try {
-        const token = localStorage.getItem("accessToken");
-        const res = await fetch(`${BASE_API_URL}/auth/profile`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          setStats({
-            likedCount: data.likedSongs?.length || 0,
-            playlists: data.playlists || [],
-          });
-        }
-      } catch (error) { console.error("Sidebar fetch error:", error); }
-    };
-    fetchLatestUserData();
-  }, [user, likedSongsTrigger, playlistUpdateTrigger]);
 
   useEffect(() => {
     const handleClick = () => {
@@ -104,6 +92,10 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
     return null;
   };
 
+  // Mutations
+  const { mutateAsync: createPlaylist } = useCreatePlaylist();
+  const { mutateAsync: deletePlaylist } = useDeletePlaylist();
+
   const handleCreatePlaylistClick = async (event) => {
     if (!isLoggedIn) {
       event.preventDefault();
@@ -117,18 +109,7 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
     }
 
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`${BASE_API_URL}/playlists`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: `My Playlist #${stats.playlists.length + 1}`, description: "", songs: [] }),
-      });
-
-      if (!res.ok) throw new Error("Server error");
-      const json = await res.json();
-
-      setStats((prev) => ({ ...prev, playlists: [...prev.playlists, json.data] }));
-      triggerPlaylistRefresh();
+      await createPlaylist(`My Playlist #${stats.playlists.length + 1}`);
       addToast("Created Library", "success");
     } catch (err) {
       addToast("Lỗi: " + err.message, "error");
@@ -145,17 +126,9 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
     const id = deleteModal.playlistId;
     if (!id) return;
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await fetch(`${BASE_API_URL}/playlists/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Delete failed");
-
-      setStats((prev) => ({ ...prev, playlists: prev.playlists.filter((pl) => pl._id !== id) }));
-      triggerPlaylistRefresh();
+      await deletePlaylist(id);
       addToast("Removed from Library", "success");
-    } catch (err) { addToast("Lỗi xóa playlist", "error"); } 
+    } catch (err) { addToast("Lỗi xóa playlist", "error"); }
     finally { setDeleteModal({ isOpen: false, playlistId: null, playlistName: "" }); }
   };
 
@@ -187,7 +160,7 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
         {isLoggedIn ? (
           // ✅ FIX: Tăng pb-4 lên pb-36 để nội dung cuối không bị PlayerBar che khuất
           <div className="overflow-y-auto flex-1 px-2 scrollbar-thin scrollbar-thumb-neutral-700 hover:scrollbar-thumb-neutral-600 pb-36">
-            
+
             {/* History Link */}
             <div className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isHistoryActive && !isCollapsed ? "bg-neutral-800 text-white" : "hover:bg-[#1A1A1A] text-neutral-400 hover:text-white"} ${isCollapsed ? "justify-center px-0" : "px-2"}`}>
               <Link to="/history" className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
@@ -209,21 +182,21 @@ export default function Sidebar({ isLoggedIn, isCollapsed, onToggleCollapse, onO
             />
 
             {/* ✅ STREAM PARTY (Đã chuyển vào đây, ngay dưới Liked Songs) */}
-            <div 
-               className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isCollapsed ? "justify-center px-0" : "px-2"} hover:bg-[#1A1A1A] text-neutral-400 hover:text-white`}
-               onClick={onOpenRoom}
+            <div
+              className={`group mt-2 flex items-center justify-between rounded-md transition-colors cursor-pointer ${isCollapsed ? "justify-center px-0" : "px-2"} hover:bg-[#1A1A1A] text-neutral-400 hover:text-white`}
+              onClick={onOpenRoom}
             >
-               <div className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
-                  <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-sm group-hover:brightness-110 transition">
-                     <Radio size={24} />
+              <div className={`flex items-center p-2 gap-3 flex-1 min-w-0 ${isCollapsed ? "justify-center" : ""}`}>
+                <div className="w-12 h-12 flex items-center justify-center flex-shrink-0 rounded overflow-hidden bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-sm group-hover:brightness-110 transition">
+                  <Radio size={24} />
+                </div>
+                {!isCollapsed && (
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate text-white">Stream Party</p>
+                    <p className="text-xs mt-1 opacity-70 truncate">Listen together</p>
                   </div>
-                  {!isCollapsed && (
-                     <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate text-white">Stream Party</p>
-                        <p className="text-xs mt-1 opacity-70 truncate">Listen together</p>
-                     </div>
-                  )}
-               </div>
+                )}
+              </div>
             </div>
 
             {/* User Playlists */}

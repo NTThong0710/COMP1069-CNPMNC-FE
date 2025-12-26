@@ -4,7 +4,6 @@ import { FiPlus } from 'react-icons/fi';
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from 'react-router-dom';
 import { Mic2, List } from 'lucide-react';
-import { useQueue } from "../context/QueueContext";
 import QueuePanel from './QueuePanel';
 
 const BASE_API_URL = import.meta.env.VITE_API_URL;
@@ -16,14 +15,20 @@ const formatTime = (timeInSeconds) => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 };
 
+import { useDispatch } from 'react-redux';
+import { removeFromQueue as removeFromQueueAction, clearQueue as clearQueueAction } from '../redux/slices/playerSlice';
+
 function PlayerBarActive({
     song, isPlaying, onPlayPause, onNext, onPrev,
     isShuffleActive, onToggleShuffle, isRepeatActive, onToggleRepeat,
     queue = [], queueCount = 0, onPlayFromQueue
 }) {
     const navigate = useNavigate();
+    const dispatch = useDispatch();
     const { user, updateUser, triggerRefreshLikedSongs } = useAuth();
-    const { removeFromQueue, clearQueue } = useQueue();
+
+    const removeFromQueue = (index) => dispatch(removeFromQueueAction(index));
+    const clearQueue = () => dispatch(clearQueueAction());
 
     const audioRef = useRef(new Audio());
     const progressBarRef = useRef(null);
@@ -61,9 +66,9 @@ function PlayerBarActive({
 
     const handleToggleLike = async (e) => {
         if (e) {
-        e.stopPropagation(); // Ngăn click lan ra thẻ cha
-        e.preventDefault();  // Ngăn hành vi mặc định (như submit form)
-    }
+            e.stopPropagation(); // Ngăn click lan ra thẻ cha
+            e.preventDefault();  // Ngăn hành vi mặc định (như submit form)
+        }
         if (!user) return alert("Vui lòng đăng nhập để thích bài hát!");
         const newStatus = !isLiked;
         setIsLiked(newStatus);
