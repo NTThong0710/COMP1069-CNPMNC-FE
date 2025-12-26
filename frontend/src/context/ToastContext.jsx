@@ -12,7 +12,7 @@ export const ToastProvider = ({ children }) => {
    * @param {number} duration - Thời gian hiển thị (ms), mặc định: 3000
    */
   const addToast = useCallback((message, type = "info", duration = 3000) => {
-    const id = Date.now();
+    const id = Date.now() + Math.random(); // Ensure uniqueness
     const toast = { id, message, type };
 
     setToasts((prev) => [...prev, toast]);

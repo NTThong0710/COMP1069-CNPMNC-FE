@@ -1,11 +1,13 @@
 import { io } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+// Hardcode để đảm bảo không bị lỗi parse .env
+const SOCKET_URL = "https://api.bitio.io.vn"; // Cloud Backend
 
-const SOCKET_URL = API_URL.replace("/api", ""); 
+console.log("🔌 Initializing Socket...");
+console.log("➡️ Socket URL:", SOCKET_URL);
 
 export const socket = io(SOCKET_URL, {
-  withCredentials: true, 
+  withCredentials: true,
   autoConnect: false,
-  transports: ["websocket", "polling"], 
+  transports: ["websocket", "polling"],
 });

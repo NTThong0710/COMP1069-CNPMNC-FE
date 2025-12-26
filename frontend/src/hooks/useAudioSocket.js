@@ -48,11 +48,26 @@ export const useAudioSocket = () => {
     // --- 2. HÀM HELPER (EMIT EVENTS) ---
 
     // Tham gia phòng (thường gọi ở RoomPage, nhưng có thể gọi ở đây nếu cần logic chung)
-    const joinRoom = useCallback((roomId) => {
-        // Logic join thường nằm ở RoomPage, nhưng App updates activeID
+    const joinRoom = useCallback((roomId, userInfo) => {
         dispatch(setActiveRoomId(roomId));
-        if (!socket.connected) socket.connect();
+
+        if (!socket.connected) {
+            socket.connect();
+        }
+
+        // Emit join event
+        socket.emit("join_room", { roomId, userInfo });
     }, [dispatch]);
+
+    // Debug Connection Errors
+    useEffect(() => {
+        const onConnectError = (err) => {
+            console.error("Socket Connection Error:", err);
+            addToast(`Socket Error: ${err.message}`, "error");
+        };
+        socket.on("connect_error", onConnectError);
+        return () => socket.off("connect_error", onConnectError);
+    }, [addToast]);
 
     // Rời phòng
     const leaveRoom = useCallback(() => {

@@ -77,6 +77,11 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("user", JSON.stringify(data.user));
       }
 
+      // Broadcast Login
+      const channel = new BroadcastChannel("auth_channel");
+      channel.postMessage("LOGIN_SUCCESS");
+      channel.close();
+
       return { success: true, role: data.user.role };
     } catch (error) {
       return { success: false, message: error.message };
@@ -111,11 +116,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   // === 4. ĐĂNG XUẤT ===
-  const logout = () => {
+  const logout = (broadcast = true) => {
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
     localStorage.removeItem("user");
     setUser(null);
+
+    if (broadcast) {
+      const channel = new BroadcastChannel("auth_channel");
+      channel.postMessage("LOGOUT");
+      channel.close();
+    }
   };
 
   // === 5. CẬP NHẬT USER THỦ CÔNG ===
@@ -126,6 +137,22 @@ export const AuthProvider = ({ children }) => {
 
 
 
+  // === X. CROSS-TAB SYNCHRONIZATION ===
+  useEffect(() => {
+    const channel = new BroadcastChannel("auth_channel");
+
+    channel.onmessage = (event) => {
+      if (event.data === "LOGOUT") {
+        logout(false); // Logout without emitting
+        window.location.reload(); // Refresh to clear state completely
+      } else if (event.data === "LOGIN_SUCCESS") {
+        window.location.reload(); // Refresh to fetch new user data
+      }
+    };
+
+    return () => channel.close();
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -135,7 +162,7 @@ export const AuthProvider = ({ children }) => {
         logout,
         loading,
         updateUser,
-        fetchUserProfile, // Utility if needed for login/register, but components should use useUserProfile hook
+        fetchUserProfile,
       }}
     >
       {!loading && children}
