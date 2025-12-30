@@ -8,7 +8,7 @@ const Register1 = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         console.log("Password set:", { password });
-        // 👉 Chuyển đến bước 3
+
     };
 
     const togglePasswordVisibility = () => {
