@@ -20,8 +20,12 @@ const historyRoutes = require('./routes/historyRoutes');
 const commentRoutes = require('./routes/commentRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 
+const limiter = require('./middleware/rateLimiter');
+const { stat } = require('fs');
+
 // 2. KHỞI TẠO APP VÀ DB
 const app = express();
+app.use(limiter);
 
 // --- [QUAN TRỌNG] CẤU HÌNH CHO CLOUDFLARE & RENDER ---
 // Giúp Express tin tưởng request đi qua Proxy (để cookie hoạt động đúng)
@@ -34,6 +38,7 @@ const allowedOrigins = [
   'https://bitio.io.vn', // Domain chính
   'https://www.bitio.io.vn', // Domain www
   'https://musicwebapp-eight.vercel.app', // Domain Vercel cũ
+  'http://127.0.0.1:5173',
   'http://localhost:5173', // Localhost Vite
   'http://localhost:3000', // Localhost React (phòng hờ)
 ];
@@ -78,6 +83,42 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // 7. ROUTES
+
+// async function startServer() {
+//   try {
+//     await connectRedis();
+
+//     const authRoutes = require('./routes/authRoutes');
+//     const songRoutes = require('./routes/songRoute');
+//     const playlistRoutes = require('./routes/playlistRoutes');
+//     const albumRoutes = require('./routes/albumRoutes');
+//     const artistRoutes = require('./routes/artistRoutes');
+//     const searchRoutes = require('./routes/searchRoutes');
+//     const userRoutes = require('./routes/userRoutes');
+//     const historyRoutes = require('./routes/historyRoutes');
+//     const commentRoutes = require('./routes/commentRoutes');
+//     const paymentRoutes = require('./routes/paymentRoutes');
+
+//     app.use('/api/auth', authRoutes);
+//     app.use('/api/songs', songRoutes);
+//     app.use('/api/playlists', playlistRoutes);
+//     app.use('/api/albums', albumRoutes);
+//     app.use('/api/artists', artistRoutes);
+//     app.use('/api/search', searchRoutes);
+//     app.use('/api/users', userRoutes);
+//     app.use('/api/history', historyRoutes);
+//     app.use('/api/comments', commentRoutes);
+//     app.use('/api/payment', paymentRoutes);
+
+//     server.listen(process.env.PORT || 5000, () => {
+//       console.log(`SERVER RUNNING ON PORT ${process.env.PORT || 5000}`);
+//     });
+//   } catch (err) {
+//     console.error('Server startup error:', err);
+//   }
+// }
+// startServer();
+
 app.use('/api/auth', authRoutes);
 app.use('/api/songs', songRoutes);
 app.use('/api/playlists', playlistRoutes);
@@ -186,4 +227,17 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`SERVER RUNNING ON PORT ${PORT}`);
 });
+// async function startServer() {
+//   try {
+//     await connectRedis();
+//     app.use(limiter);
+
+//     server.listen(process.env.PORT || 5000, () => {
+//       console.log(`SERVER RUNNING ON PORT ${process.env.PORT || 5000}`);
+//     });
+//   } catch (error) {
+//     console.error('Error starting server:', error);
+//   }
+// }
+// startServer();
 module.exports = server;

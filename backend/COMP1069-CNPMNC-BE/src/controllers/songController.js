@@ -163,7 +163,18 @@ exports.getAllSongs = async (req, res) => {
 };
 // [GET] /api/songs/:id
 exports.getSongById = async (req, res) => {
+  const songId = req.params.id;
+  const cacheKey = `song:${songId}`;
+
   try {
+    // check redis
+    const cachedSongs = await pubClient.get(cacheKey);
+    if (cachedSongs) {
+      console.log('Serving song from cache');
+      return res.json(JSON.parse(cachedSongs));
+    }
+
+    // fetch from db
     const song = await Song.findById(req.params.id)
       .populate('artist', 'name')
       .populate('album', 'title');
@@ -172,6 +183,10 @@ exports.getSongById = async (req, res) => {
         message: 'Song not found',
       });
     }
+
+    // save to redis
+    await pubClient.setEx(cacheKey, cacheTTL.song.detail, JSON.stringify(song));
+
     res.json(song);
   } catch (err) {
     res.status(500).json({ message: 'Get song failed' });
@@ -385,10 +400,7 @@ exports.getLyrics = async (req, res) => {
       title,
       lyrics: song.lyric || 'Lyrics not found.',
       song,
-    });
-    // res.json({
-    //   lyric: data.lyrics
-    // })
+    }); // res.json({ //   lyric: data.lyrics // })
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to fetch lyrics' });
@@ -451,49 +463,34 @@ exports.getRecommendedSongs = async (req, res) => {
     );
 
     res.json(results);
-    // let song = null;
-
-    // // 1. Kiểm tra xem ID gửi lên có phải ObjectId không?
-    // if (mongoose.Types.ObjectId.isValid(id)) {
-    //   song = await Song.findById(id);
-    // } else {
-    //   // 2. Nếu không phải, tìm theo spotifyId (Jamendo ID)
-    //   song = await Song.findOne({ spotifyId: id });
-    // }
-
-    // // 3. Nếu vẫn không thấy bài hát (do chưa import vào DB), trả về rỗng để không crash
-    // if (!song) {
-    //   return res.json({ base: 'Unknown', recommendations: [] });
-    // }
-
-    // const relatedSongs = await Song.find({
-    //   _id: { $ne: song._id },
-    //   $or: [
-    //     { genre: song.genre },
-    //     { artist: song.artist },
-    //     { album: song.album },
-    //   ],
-    // })
-    //   .populate('artist', 'name avatar artist_id image')
-    //   .populate('album', 'title cover')
-    //   .limit(10);
-
-    // res.json({ base: song.title, recommendations: relatedSongs });
   } catch (err) {
     console.error('Recommendation Error:', err); // Log lỗi ra console để dễ debug
     res.status(500).json({ message: 'Failed to fetch recommendations' });
   }
 };
 // [GET] /api/songs/top?limit=5
+const CACHE_TOP_SONGS_KEY = `songs:top_list`;
 exports.getTopSongs = async (req, res) => {
   const limit = parseInt(req.query.limit) || 5;
+  const cacheKey = `${CACHE_TOP_SONGS_KEY}:limit_${limit}`;
+
   try {
+    // check redis
+    const cachedSongs = await pubClient.get(cacheKey);
+    if (cachedSongs) {
+      console.log('Serving top songs from cache');
+      return res.json(JSON.parse(cachedSongs));
+    }
+
     const songs = await Song.find()
       .populate('artist', 'name artist_id avatar')
       .populate('album', 'title cover');
 
+    await pubClient.setEx(cacheKey, 1800, JSON.stringify(songs));
     res.json(songs);
-  } catch (err) {}
+  } catch (err) {
+    console.error('Redis/DB Error in getTopSongs:', err);
+  }
 };
 
 // [GET] /api/songs/most-played
