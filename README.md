@@ -94,6 +94,7 @@ Follow the steps below to run the project locally.
 * Node.js (v18+)
 * MongoDB (Local or Atlas URL)
 * Redis (Required for caching)
+* Cloudflare
 
 ### Phase 1: Start Frontend (Run this first)
 
