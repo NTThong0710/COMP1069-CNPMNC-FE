@@ -1,0 +1,106 @@
+services:
+  # ============================================
+  # CACHE SERVICE
+  # ============================================
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: music_redis_dev
+    ports:
+      - '6379:6379'
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    healthcheck:
+      test: ['CMD', 'redis-cli', '--raw', 'incr', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - redis_data:/data
+    networks:
+      - music_network
+    restart: unless-stopped
+
+  # ============================================
+  # MESSAGE QUEUE SERVICE
+  # ============================================
+
+  # RabbitMQ Message Broker
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: music_rabbitmq_dev
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      RABBITMQ_DEFAULT_VHOST: /
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - music_network
+    restart: unless-stopped
+
+  # ============================================
+  # STORAGE SERVICE
+  # ============================================
+
+  # LocalStack (AWS S3 simulation)
+  localstack:
+    image: localstack/localstack:3.0
+    container_name: music_localstack_dev
+    ports:
+      - '4566:4566'
+    environment:
+      SERVICES: s3
+      DEBUG: 0
+      LOCALSTACK_ENFORCE_AWS_HEADERS: 1
+      AWS_DEFAULT_REGION: ${AWS_REGION:-ap-southeast-1}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
+    volumes:
+      - ./localstack_init.sh:/docker-entrypoint-initaws.d/init.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - music_network
+    healthcheck:
+      test: ['CMD', 'awslocal', 's3', 'ls']
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  # ============================================
+  # MONITORING & TOOLS
+  # ============================================
+
+  # Redis Commander (Redis GUI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: music_redis_commander_dev
+    ports:
+      - '8082:8081'
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:${REDIS_PASSWORD:-redis_password}
+    depends_on:
+      - redis
+    networks:
+      - music_network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  rabbitmq_data:
+    driver: local
+
+networks:
+  music_network:
+    driver: bridge
