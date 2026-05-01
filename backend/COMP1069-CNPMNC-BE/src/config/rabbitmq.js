@@ -4,6 +4,7 @@ require('dotenv').config();
 const RABBITMQ_CONFIG = {
   // connect
   url: process.env.RABBITMQ_URL,
+  reconnectTimeout: 5000, // 5 seconds
 
   // exchange config
   exchange: {
